@@ -1,0 +1,255 @@
+
+<!DOCTYPE html>
+
+<html lang="de">
+<head>
+<meta charset="utf-8"/>
+<title>DartVader Turnierplan</title>
+<style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+        th { background-color: #f2f2f2; }
+        input[type="text"] { width: 100%; box-sizing: border-box; }
+        button { margin: 5px; padding: 8px 12px; }
+        .draggable { cursor: move; }
+        .winner-select { width: 100%; }
+    </style>
+</head>
+<body>
+<h1>DartVader Turnierplan</h1>
+<h2>Teilnehmer</h2>
+<table id="playersTable">
+<thead>
+<tr>
+<th>Name</th>
+<th>Spiele</th>
+<th>Siege</th>
+<th>Niederlagen</th>
+<th>Aktion</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+<button onclick="addPlayer()">➕ Spieler hinzufügen</button>
+<h2>Hinrunde</h2>
+<table id="hinrundeTable">
+<thead>
+<tr><th>Spiel</th><th>Spieler A</th><th>Spieler B</th><th>Sieger</th></tr>
+</thead>
+<tbody></tbody>
+</table>
+<h2>Rückrunde</h2>
+<table id="rueckrundeTable">
+<thead>
+<tr><th>Spiel</th><th>Spieler A</th><th>Spieler B</th><th>Sieger</th></tr>
+</thead>
+<tbody></tbody>
+</table>
+<button onclick="shufflePairingsWithConstraint()">🔄 Zufällige Paarungen</button>
+<script>
+let players = [];
+let hinrunde = [];
+let rueckrunde = [];
+
+function addPlayer(name = "") {
+    const id = Date.now().toString();
+    players.push({ id, name: name || "Spieler " + (players.length + 1), spiele: 0, siege: 0, niederlagen: 0 });
+    updatePlayersTable();
+    generatePairings();
+}
+
+function deletePlayer(id) {
+    players = players.filter(p => p.id !== id);
+    generatePairings();
+    updatePlayersTable();
+}
+
+function updatePlayersTable() {
+    const tbody = document.querySelector("#playersTable tbody");
+    tbody.innerHTML = "";
+    players.forEach(player => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td><input type="text" value="${player.name}" onchange="renamePlayer('${player.id}', this.value)"></td>
+            <td>${player.spiele}</td>
+            <td>${player.siege}</td>
+            <td>${player.niederlagen}</td>
+            <td><button onclick="deletePlayer('${player.id}')">🗑️</button></td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function renamePlayer(id, newName) {
+    const player = players.find(p => p.id === id);
+    if (player) {
+        player.name = newName;
+        updatePairingNames();
+    }
+}
+
+function updatePairingNames() {
+    [...hinrunde, ...rueckrunde].forEach(pair => {
+        pair.nameA = players.find(p => p.id === pair.idA)?.name || "Unbekannt";
+        pair.nameB = players.find(p => p.id === pair.idB)?.name || "Unbekannt";
+    });
+    renderPairings();
+}
+
+function generatePairings() {
+    hinrunde = [];
+    rueckrunde = [];
+    for (let i = 0; i < players.length; i++) {
+        for (let j = i + 1; j < players.length; j++) {
+            hinrunde.push({ idA: players[i].id, idB: players[j].id, nameA: players[i].name, nameB: players[j].name, winner: "" });
+            rueckrunde.push({ idA: players[j].id, idB: players[i].id, nameA: players[j].name, nameB: players[i].name, winner: "" });
+        }
+    }
+    renderPairings();
+    updateStats();
+}
+
+function renderPairings() {
+    const hinBody = document.querySelector("#hinrundeTable tbody");
+    const rueckBody = document.querySelector("#rueckrundeTable tbody");
+    hinBody.innerHTML = "";
+    rueckBody.innerHTML = "";
+
+    hinrunde.forEach((pair, index) => {
+        const tr = document.createElement("tr");
+        tr.classList.add("draggable");
+        tr.draggable = true;
+        tr.ondragstart = e => e.dataTransfer.setData("text/plain", index);
+        tr.ondragover = e => e.preventDefault();
+        tr.ondrop = e => {
+            const from = parseInt(e.dataTransfer.getData("text/plain"));
+            const to = index;
+            const temp = hinrunde[from];
+            hinrunde[from] = hinrunde[to];
+            hinrunde[to] = temp;
+            syncRueckrunde();
+            renderPairings();
+        };
+        tr.innerHTML = `
+            <td>Spiel ${index + 1}</td>
+            <td>${pair.nameA}</td>
+            <td>${pair.nameB}</td>
+            <td>
+                <select class="winner-select" onchange="setWinner('hinrunde', ${index}, this.value)">
+                    <option value="">–</option>
+                    <option value="${pair.idA}">${pair.nameA}</option>
+                    <option value="${pair.idB}">${pair.nameB}</option>
+                </select>
+            </td>
+        `;
+        hinBody.appendChild(tr);
+    });
+
+    rueckrunde.forEach((pair, index) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td>Spiel ${index + 1}</td>
+            <td>${pair.nameA}</td>
+            <td>${pair.nameB}</td>
+            <td>
+                <select class="winner-select" onchange="setWinner('rueckrunde', ${index}, this.value)">
+                    <option value="">–</option>
+                    <option value="${pair.idA}">${pair.nameA}</option>
+                    <option value="${pair.idB}">${pair.nameB}</option>
+                </select>
+            </td>
+        `;
+        rueckBody.appendChild(tr);
+    });
+}
+
+function syncRueckrunde() {
+    rueckrunde = hinrunde.map(pair => ({
+        idA: pair.idB,
+        idB: pair.idA,
+        nameA: players.find(p => p.id === pair.idB)?.name || "Unbekannt",
+        nameB: players.find(p => p.id === pair.idA)?.name || "Unbekannt",
+        winner: ""
+    }));
+}
+
+function setWinner(runde, index, winnerId) {
+    const pair = runde === "hinrunde" ? hinrunde[index] : rueckrunde[index];
+    pair.winner = winnerId;
+    updateStats();
+}
+
+function updateStats() {
+    players.forEach(p => {
+        p.spiele = 0;
+        p.siege = 0;
+        p.niederlagen = 0;
+    });
+
+    [...hinrunde, ...rueckrunde].forEach(pair => {
+        if (pair.winner) {
+            const playerA = players.find(p => p.id === pair.idA);
+            const playerB = players.find(p => p.id === pair.idB);
+            if (playerA && playerB) {
+                playerA.spiele++;
+                playerB.spiele++;
+                if (pair.winner === playerA.id) {
+                    playerA.siege++;
+                    playerB.niederlagen++;
+                } else {
+                    playerB.siege++;
+                    playerA.niederlagen++;
+                }
+            }
+        }
+    });
+
+    updatePlayersTable();
+}
+
+
+function shufflePairingsWithConstraint() {
+    if (hinrunde.length === 0) return;
+
+    let shuffled = [...hinrunde];
+
+    function isValidOrder(list) {
+        for (let i = 0; i < list.length - 2; i++) {
+            const a = list[i], b = list[i + 1], c = list[i + 2];
+            const playersA = [a.idA, a.idB];
+            const playersB = [b.idA, b.idB];
+            const playersC = [c.idA, c.idB];
+            if (playersA.some(p => playersB.includes(p)) &&
+                playersB.some(p => playersC.includes(p)) &&
+                playersA.some(p => playersC.includes(p))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    let attempts = 0;
+    do {
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        attempts++;
+        if (attempts > 5000) break; // safety stop
+    } while (!isValidOrder(shuffled));
+
+    hinrunde = shuffled;
+    syncRueckrunde();
+    renderPairings();
+}
+
+window.onload = () => {
+    addPlayer("Spieler 1");
+    addPlayer("Spieler 2");
+    addPlayer("Spieler 3");
+    generatePairings();
+};
+</script>
+</body>
+</html>
