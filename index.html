@@ -445,3 +445,185 @@
     };
   </script>
 </body>
+
+<script>
+// --- Prüfer: darf next direkt nach prev kommen? ---
+function isNonConsecutive(prevMatch, nextMatch) {
+  if (!prevMatch) return true;
+  const prevPlayers = [prevMatch.a, prevMatch.b];
+  return !prevPlayers.includes(nextMatch.a) && !prevPlayers.includes(nextMatch.b);
+}
+
+// --- Kern: ordnet eine Runde ohne Back-to-Back (Greedy + kleiner Reparaturversuch) ---
+function orderWithoutConsecutive(matches) {
+  const remaining = matches.slice();
+  const ordered = [];
+
+  while (remaining.length > 0) {
+    let placed = false;
+
+    // 1) Naheliegender Kandidat
+    for (let i = 0; i < remaining.length; i++) {
+      const candidate = remaining[i];
+      const prev = ordered.length ? ordered[ordered.length - 1] : null;
+      if (isNonConsecutive(prev, candidate)) {
+        ordered.push(candidate);
+        remaining.splice(i, 1);
+        placed = true;
+        break;
+      }
+    }
+
+    // 2) Reparatur durch Tausch mit letztem Spiel
+    if (!placed && ordered.length >= 2) {
+      for (let i = 0; i < remaining.length; i++) {
+        const candidate = remaining[i];
+        const prev = ordered[ordered.length - 2]; // vorletztes Spiel
+        if (isNonConsecutive(prev, candidate)) {
+          const last = ordered.pop();
+          ordered.push(candidate);
+          remaining.splice(i, 1);
+          remaining.push(last);
+          placed = true;
+          break;
+        }
+      }
+    }
+
+    // 3) Fallback: leichte Durchmischung, um Deadlocks aufzubrechen
+    if (!placed) {
+      shuffleArray(remaining);
+      // Wenn weiterhin nichts geht, abbrechen (selten; meist <3 Spieler)
+      console.warn("Hinweis: Vollständiges Verhindern von Back-to-Back innerhalb dieser Runde war nicht möglich.");
+      // Bestmögliche Reihenfolge zurückgeben
+      return ordered.concat(remaining);
+    }
+  }
+
+  return ordered;
+}
+
+// --- Utility: Fisher-Yates Shuffle ---
+function shuffleArray(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+// --- Grenze zwischen Hin- und Rückrunde strikt konfliktfrei machen ---
+function fixBoundaryStrict(orderedHin, orderedRueck) {
+  if (orderedHin.length === 0 || orderedRueck.length === 0) return { orderedHin, orderedRueck };
+
+  const lastHin = orderedHin[orderedHin.length - 1];
+
+  // Falls erster Rückrunden-Match Konflikt hat, suche einen passenden Startkandidaten in Rückrunde
+  if (!isNonConsecutive(lastHin, orderedRueck[0])) {
+    // 1) Finde irgendein Match in Rückrunde, das auf lastHin folgen darf
+    let swapIndex = -1;
+    for (let i = 1; i < orderedRueck.length; i++) {
+      if (isNonConsecutive(lastHin, orderedRueck[i])) {
+        swapIndex = i;
+        break;
+      }
+    }
+    if (swapIndex > 0) {
+      // Tausche gefundenen Kandidaten nach vorne
+      const tmp = orderedRueck[0];
+      orderedRueck[0] = orderedRueck[swapIndex];
+      orderedRueck[swapIndex] = tmp;
+
+      // Sicherheit: überprüfe, ob dadurch innerhalb der Rückrunde ein Back-to-Back entstanden ist
+      for (let k = 1; k < orderedRueck.length; k++) {
+        if (!isNonConsecutive(orderedRueck[k - 1], orderedRueck[k])) {
+          // kleine lokale Reparatur in der Rückrunde
+          // Versuche, mit einem späteren Match zu tauschen
+          let fixed = false;
+          for (let j = k + 1; j < orderedRueck.length; j++) {
+            if (isNonConsecutive(orderedRueck[k - 1], orderedRueck[j]) &&
+                (j + 1 >= orderedRueck.length || isNonConsecutive(orderedRueck[j], orderedRueck[j + 1]))) {
+              [orderedRueck[k], orderedRueck[j]] = [orderedRueck[j], orderedRueck[k]];
+              fixed = true;
+              break;
+            }
+          }
+          if (!fixed) {
+            // notfalls Runde neu ordnen (mit festem ersten Spiel)
+            const head = orderedRueck[0];
+            const tail = orderWithoutConsecutive(orderedRueck.slice(1));
+            orderedRueck = [head, ...tail];
+            break;
+          }
+        }
+      }
+    } else {
+      // 2) Kein passender Start in Rück gefunden -> versuche letzte 2 Hin-Spiele zu tauschen
+      if (orderedHin.length >= 2) {
+        const prevPrevHin = orderedHin[orderedHin.length - 2];
+        if (isNonConsecutive(prevPrevHin, orderedRueck[0]) && isNonConsecutive(prevPrevHin, lastHin)) {
+          // Swap der letzten beiden Hin-Spiele
+          [orderedHin[orderedHin.length - 2], orderedHin[orderedHin.length - 1]] =
+            [orderedHin[orderedHin.length - 1], orderedHin[orderedHin.length - 2]];
+        } else {
+          // 3) Harte Fälle: als Fallback Rückrunde komplett neu ordnen mit fixem Start,
+          // ggf. sogar mit Start, der am wenigsten Konflikte erzeugt
+          let candidateIndex = 0;
+          for (let i = 0; i < orderedRueck.length; i++) {
+            if (isNonConsecutive(lastHin, orderedRueck[i])) { candidateIndex = i; break; }
+          }
+          const head = orderedRueck[candidateIndex];
+          const rest = orderedRueck.filter((_, idx) => idx !== candidateIndex);
+          orderedRueck = [head, ...orderWithoutConsecutive(rest)];
+        }
+      }
+    }
+  }
+  return { orderedHin, orderedRueck };
+}
+
+// --- Gesamtlogik: strikt über Hin & Rück ---
+function scheduleStrictAcrossRounds(hinrundeMatches, rueckrundeMatches) {
+  // 1) Jede Runde intern ordnen
+  let orderedHin = orderWithoutConsecutive(hinrundeMatches);
+  let orderedRueck = orderWithoutConsecutive(rueckrundeMatches);
+
+  // 2) Grenze strikt konfliktfrei machen
+  ({ orderedHin, orderedRueck } = fixBoundaryStrict(orderedHin, orderedRueck));
+
+  // 3) Validieren über die gesamte Abfolge
+  const full = [...orderedHin, ...orderedRueck];
+  const violationIndex = findConsecutiveViolationIndex(full);
+  if (violationIndex !== -1) {
+    console.warn("Strikte Back-to-Back-Vermeidung über Hin & Rück nicht vollständig möglich. Prüfe Anzahl/Verteilung der Spieler.");
+    // Optional: letzter Versuch – vollständige Neuordnung der Rückrunde mit Fix der Grenze
+    ({ orderedHin, orderedRueck } = fixBoundaryStrict(orderedHin, orderWithoutConsecutive(orderedRueck)));
+  }
+
+  return { orderedHin, orderedRueck };
+}
+
+// --- Prüfer: gibt Index zurück, an dem ein Verstoß auftritt, sonst -1 ---
+function findConsecutiveViolationIndex(allMatches) {
+  for (let i = 1; i < allMatches.length; i++) {
+    if (!isNonConsecutive(allMatches[i - 1], allMatches[i])) return i;
+  }
+  return -1;
+}
+
+// --- Beispiel: Integration im Button-Handler ---
+function onFairplayButtonClick(players) {
+  // Deine bestehende Erstellung:
+  // const { hinrundeMatches, rueckrundeMatches } = generateFairPairs(players);
+
+  // >> Beispiel-Stub (entfernen): hier würdest du die realen Arrays aus deiner Logik holen <<
+  const hinrundeMatches = window.hinrundeMatches || [];
+  const rueckrundeMatches = window.rueckrundeMatches || [];
+
+  const { orderedHin, orderedRueck } = scheduleStrictAcrossRounds(hinrundeMatches, rueckrundeMatches);
+
+  // Danach sauber in die Tabellen rendern:
+  renderHinrunde(orderedHin);
+  renderRueckrunde(orderedRueck);
+}
+</script>
