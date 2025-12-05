@@ -1,580 +1,367 @@
 
-<!doctype html>
+<!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DartVader – Fairer Spielplan</title>
+  <meta charset="utf-8"/>
+  <title>DartVader Turnierplan</title>
   <style>
-    :root {
-      --bg: #0f1220;
-      --panel: #151a2d;
-      --muted: #8591b0;
-      --text: #e8ecf8;
-      --accent: #6ee7b7;
-      --accent-2: #60a5fa;
-      --danger: #f87171;
-      --warn: #fbbf24;
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      font-family: system-ui, Segoe UI, Roboto, Arial, sans-serif;
-      background: linear-gradient(120deg, #0f1220 0%, #0d1324 100%);
-      color: var(--text);
-    }
-    header {
-      padding: 24px 20px 10px;
-      text-align: center;
-    }
-    header h1 {
-      margin: 0 0 6px;
-      font-size: 1.8rem;
-    }
-    header p { margin: 0; color: var(--muted); }
-    main {
-      max-width: 980px;
-      margin: 20px auto 60px;
-      padding: 0 16px;
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 16px;
-    }
-    .card {
-      background: var(--panel);
-      border: 1px solid rgba(255,255,255,0.06);
-      border-radius: 12px;
-      padding: 16px;
-      box-shadow: 0 6px 24px rgba(0,0,0,0.3);
-    }
-    .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-    .grow { flex: 1 1 auto; }
-    .muted { color: var(--muted); }
-    input[type="text"] {
-      width: 100%;
-      background: #0f1530;
-      color: var(--text);
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 8px;
-      padding: 10px 12px;
-      outline: none;
-    }
-    input[type="text"]:focus { border-color: var(--accent-2); }
-    button {
-      background: linear-gradient(135deg, #2563eb, #22c55e);
-      color: white;
-      border: none;
-      padding: 10px 14px;
-      border-radius: 10px;
-      cursor: pointer;
-      transition: transform 0.06s ease, filter 0.1s ease;
-      font-weight: 600;
-      box-shadow: 0 6px 14px rgba(34,197,94,0.22), 0 6px 14px rgba(37,99,235,0.22);
-    }
-    button:hover { filter: brightness(1.05); }
-    button:active { transform: translateY(1px); }
-    .btn-ghost {
-      background: transparent;
-      border: 1px solid rgba(255,255,255,0.15);
-      color: var(--text);
-      box-shadow: none;
-    }
-    .btn-danger {
-      background: linear-gradient(135deg, #ef4444, #f97316);
-    }
-    .list {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 8px;
-      margin-top: 12px;
-    }
-    .player-row {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-    }
-    .player-row input { flex: 1; }
-    .tag {
-      display: inline-flex; align-items: center; gap: 6px;
-      background: #0f1530; border: 1px solid rgba(255,255,255,0.08);
-      padding: 6px 10px; border-radius: 999px; color: var(--muted);
-    }
-    .badge {
-      display: inline-block;
-      padding: 4px 8px; border-radius: 999px; font-size: 12px;
-      border: 1px solid rgba(255,255,255,0.12);
-      background: #0f1530;
-    }
-    .badge.ok { color: #10b981; border-color: #10b98144; }
-    .badge.warn { color: var(--warn); border-color: #fbbf2444; }
-    .badge.err { color: var(--danger); border-color: #f8717144; }
-    ol.schedule {
-      counter-reset: item;
-      list-style: none;
-      padding-left: 0;
-      margin: 10px 0 0;
-    }
-    ol.schedule li {
-      counter-increment: item;
-      padding: 8px 12px;
-      background: #0f1530;
-      border: 1px solid rgba(255,255,255,0.06);
-      border-radius: 10px;
-      margin: 6px 0;
-      display: flex; justify-content: space-between; align-items: center;
-      gap: 10px;
-    }
-    ol.schedule li::before {
-      content: counter(item) ".";
-      color: var(--muted);
-      margin-right: 8px;
-    }
-    .pair { font-weight: 600; }
-    .tools { display: flex; gap: 8px; flex-wrap: wrap; }
-    footer {
-      text-align: center; color: var(--muted);
-      padding: 30px 10px 50px;
-    }
-    @media (min-width: 860px) {
-      main {
-        grid-template-columns: 360px 1fr;
-        align-items: start;
-      }
-    }
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+    th { background-color: #f2f2f2; }
+    input[type="text"] { width: 100%; box-sizing: border-box; }
+    input.score { width: 70px; }
+    button { margin: 5px; padding: 8px 12px; }
+    .draggable { cursor: move; }
+    .winner-select { width: 100%; }
+    .right { text-align: right; }
   </style>
 </head>
 <body>
-  <header>
-    <h1>DartVader – Fairer Spielplan</h1>
-    <p class="muted">Hinrunde + Rückrunde mit Fairplay-Regeln: niemand spielt 3× in Folge, niemand wartet 3× in Folge.</p>
-  </header>
+  <h1>DartVader Turnierplan</h1>
 
-  <main>
-    <!-- Teilnehmer -->
-    <section class="card" id="players-card">
-      <h2>Teilnehmer</h2>
-      <p class="muted">Trage beliebig viele Namen ein. Leere Zeilen werden ignoriert.</p>
-      <div class="list" id="player-list"></div>
-      <div class="row" style="margin-top:10px;">
-        <button id="btnAddPlayer" class="btn-ghost">+ Spieler hinzufügen</button>
-        <button id="btnClearPlayers" class="btn-danger">Liste leeren</button>
-        <span class="grow"></span>
-        <span id="countBadge" class="badge">0 Spieler</span>
-      </div>
-      <hr style="border-color: rgba(255,255,255,0.06); margin: 14px 0;">
-      <div class="row">
-        <button id="btnFairShuffle">🎲 Zufall/Fair erzeugen</button>
-        <button id="btnExportCSV" class="btn-ghost">⬇️ Export CSV</button>
-        <span class="grow"></span>
-        <span id="validBadge" class="badge">noch kein Plan</span>
-      </div>
-      <p class="muted" style="margin-top:8px;">Jeder Klick erzeugt eine neue, faire Reihenfolge (Hin- und Rückrunde automatisch).</p>
-    </section>
+  <h2>Teilnehmer</h2>
+  <table id="playersTable">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Spiele</th>
+        <th>Siege</th>
+        <th>Niederlagen</th>
+        <th>Aktion</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+  <button onclick="addPlayer()">➕ Spieler hinzufügen</button>
 
-    <!-- Spielplan -->
-    <section class="card">
-      <div class="row" style="justify-content: space-between;">
-        <h2>Spielplan</h2>
-        <div class="tools">
-          <span class="tag">Regeln aktiv ✅</span>
-          <span class="tag">Kein direktes Rematch zur Halbzeit 🔒</span>
-        </div>
-      </div>
+  <h2>Hinrunde</h2>
+  <table id="hinrundeTable">
+    <thead>
+      <tr>
+        <th>Spiel</th>
+        <th>Spieler A</th>
+        <th>Score A</th>
+        <th>Score B</th>
+        <th>Spieler B</th>
+        <th>Sieger</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
 
-      <h3>Hinrunde</h3>
-      <ol id="list-hinrunde" class="schedule"></ol>
+  <h2>Rückrunde</h2>
+  <table id="rueckrundeTable">
+    <thead>
+      <tr>
+        <th>Spiel</th>
+        <th>Spieler A</th>
+        <th>Score A</th>
+        <th>Score B</th>
+        <th>Spieler B</th>
+        <th>Sieger</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
 
-      <h3 style="margin-top:16px;">Rückrunde</h3>
-      <ol id="list-rueckrunde" class="schedule"></ol>
-    </section>
-  </main>
+  <button onclick="shufflePairingsWithConstraint()">🔄 Zufällige Paarungen</button>
+  <button onclick="resetAllResults()">🧹 Ergebnisse zurücksetzen</button>
 
-  <footer>© DartVader – Fair Scheduler</footer>
+  <h2>Ergebnisse (Spielerstatistik)</h2>
+  <table id="resultsTable">
+    <thead>
+      <tr>
+        <th>Spieler</th>
+        <th>Spiele</th>
+        <th>Siege</th>
+        <th>Niederlagen</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
 
   <script>
-    /***************
-     * Persistenz
-     ***************/
-    const LS_KEY = 'dartvader_players_v1';
+    let players = [];
+    let hinrunde = [];
+    let rueckrunde = [];
 
-    function loadPlayers() {
-      try {
-        const raw = localStorage.getItem(LS_KEY);
-        if (!raw) return [];
-        const arr = JSON.parse(raw);
-        if (!Array.isArray(arr)) return [];
-        return arr.filter(x => typeof x === 'string').slice(0, 200);
-      } catch { return []; }
-    }
-    function savePlayers(players) {
-      try { localStorage.setItem(LS_KEY, JSON.stringify(players)); } catch {}
+    function addPlayer(name = "") {
+      const id = Date.now().toString() + Math.random().toString(36).slice(2,6);
+      players.push({ id, name: name || "Spieler " + (players.length + 1), spiele: 0, siege: 0, niederlagen: 0 });
+      updatePlayersTable();
+      generatePairings();
     }
 
-    /***************
-     * DOM-Helfer
-     ***************/
-    const playerListEl = document.getElementById('player-list');
-    const countBadge = document.getElementById('countBadge');
-    const validBadge = document.getElementById('validBadge');
-
-    function updateCountBadge(n) {
-      countBadge.textContent = n + (n === 1 ? ' Spieler' : ' Spieler');
-    }
-    function setValidBadge(state, msg) {
-      validBadge.classList.remove('ok', 'warn', 'err');
-      if (state === 'ok') validBadge.classList.add('ok');
-      if (state === 'warn') validBadge.classList.add('warn');
-      if (state === 'err') validBadge.classList.add('err');
-      validBadge.textContent = msg;
+    function deletePlayer(id) {
+      players = players.filter(p => p.id !== id);
+      generatePairings();
+      updatePlayersTable();
+      renderResultsTable();
     }
 
-    function renderPlayerInputs(players) {
-      playerListEl.innerHTML = '';
-      (players.length ? players : ['', '', '', '', '']).forEach((name, idx) => {
-        const row = document.createElement('div');
-        row.className = 'player-row';
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.placeholder = 'Spieler ' + (idx + 1);
-        input.value = name;
-        input.className = 'player-name';
-        input.addEventListener('change', persistPlayersFromUI);
-        const del = document.createElement('button');
-        del.className = 'btn-ghost';
-        del.textContent = '✖';
-        del.title = 'Entfernen';
-        del.addEventListener('click', () => {
-          row.remove();
-          persistPlayersFromUI();
-        });
-        row.appendChild(input);
-        row.appendChild(del);
-        playerListEl.appendChild(row);
+    function updatePlayersTable() {
+      const tbody = document.querySelector("#playersTable tbody");
+      tbody.innerHTML = "";
+      players.forEach(player => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td><input type="text" value="${player.name}" onchange="renamePlayer('${player.id}', this.value)"></td>
+          <td>${player.spiele}</td>
+          <td>${player.siege}</td>
+          <td>${player.niederlagen}</td>
+          <td><button onclick="deletePlayer('${player.id}')">🗑️</button></td>
+        `;
+        tbody.appendChild(tr);
       });
-      updateCountBadge(document.querySelectorAll('.player-name').length);
     }
 
-    function getPlayersFromUI() {
-      const names = Array.from(document.querySelectorAll('.player-name'))
-        .map(el => (el.value ?? '').trim())
-        .filter(Boolean);
-      // Duplikate entfernen (Case-insensitiv)
-      const seen = new Set();
-      const clean = [];
-      for (const n of names) {
-        const k = n.toLowerCase();
-        if (!seen.has(k)) { seen.add(k); clean.push(n); }
+    function renamePlayer(id, newName) {
+      const player = players.find(p => p.id === id);
+      if (player) {
+        player.name = newName;
+        updatePairingNames();
+        renderResultsTable();
       }
-      return clean;
-    }
-    function persistPlayersFromUI() {
-      const p = getPlayersFromUI();
-      savePlayers(p);
-      updateCountBadge(p.length);
     }
 
-    // Buttons
-    document.getElementById('btnAddPlayer').addEventListener('click', () => {
-      const row = document.createElement('div');
-      row.className = 'player-row';
-      const input = document.createElement('input');
-      input.type = 'text';
-      input.placeholder = 'Spieler';
-      input.className = 'player-name';
-      input.addEventListener('change', persistPlayersFromUI);
-      const del = document.createElement('button');
-      del.className = 'btn-ghost';
-      del.textContent = '✖';
-      del.title = 'Entfernen';
-      del.addEventListener('click', () => {
-        row.remove();
-        persistPlayersFromUI();
+    function updatePairingNames() {
+      [...hinrunde, ...rueckrunde].forEach(pair => {
+        pair.nameA = players.find(p => p.id === pair.idA)?.name || "Unbekannt";
+        pair.nameB = players.find(p => p.id === pair.idB)?.name || "Unbekannt";
       });
-      row.appendChild(input);
-      row.appendChild(del);
-      playerListEl.appendChild(row);
-      persistPlayersFromUI();
-      input.focus();
-    });
-
-    document.getElementById('btnClearPlayers').addEventListener('click', () => {
-      if (!confirm('Spieler-Liste wirklich leeren?')) return;
-      renderPlayerInputs([]);
-      persistPlayersFromUI();
-      setValidBadge('warn', 'Liste geleert');
-      document.getElementById('list-hinrunde').innerHTML = '';
-      document.getElementById('list-rueckrunde').innerHTML = '';
-    });
-
-    /***************
-     * Scheduler – Fairness-Logik
-     ***************/
-    function shuffle(array) {
-      const a = array.slice();
-      for (let i = a.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [a[i], a[j]] = [a[j], a[i]];
-      }
-      return a;
+      renderPairings();
     }
-    function toKey(a, b) {
-      return a < b ? `${a}__${b}` : `${b}__${a}`;
-    }
-    function createAllPairings(players) {
-      const pairs = [];
+
+    function generatePairings() {
+      hinrunde = [];
+      rueckrunde = [];
       for (let i = 0; i < players.length; i++) {
         for (let j = i + 1; j < players.length; j++) {
-          pairs.push([players[i], players[j]]);
+          hinrunde.push({
+            idA: players[i].id, idB: players[j].id,
+            nameA: players[i].name, nameB: players[j].name,
+            winner: "", scoreA: "", scoreB: ""
+          });
+          rueckrunde.push({
+            idA: players[j].id, idB: players[i].id,
+            nameA: players[j].name, nameB: players[i].name,
+            winner: "", scoreA: "", scoreB: ""
+          });
         }
       }
-      return pairs;
+      renderPairings();
+      updateStats();
+      renderResultsTable();
     }
-    function validateSchedule(schedule, players, { maxWait = 2, maxConsec = 2 } = {}) {
-      const wait = new Map(players.map(p => [p, 0]));
-      const consec = new Map(players.map(p => [p, 0]));
-      for (const [p1, p2] of schedule) {
-        for (const p of players) {
-          if (p === p1 || p === p2) {
-            consec.set(p, (consec.get(p) || 0) + 1);
-            wait.set(p, 0);
-            if (consec.get(p) > maxConsec) return { ok: false, error: `> ${maxConsec}x in Folge gespielt: ${p}` };
-          } else {
-            wait.set(p, (wait.get(p) || 0) + 1);
-            consec.set(p, 0);
-            if (wait.get(p) > maxWait) return { ok: false, error: `> ${maxWait}x in Folge gewartet: ${p}` };
+
+    function renderPairings() {
+      const hinBody = document.querySelector("#hinrundeTable tbody");
+      const rueckBody = document.querySelector("#rueckrundeTable tbody");
+      hinBody.innerHTML = "";
+      rueckBody.innerHTML = "";
+
+      // Hinrunde mit Drag&Drop beibehalten
+      hinrunde.forEach((pair, index) => {
+        const tr = document.createElement("tr");
+        tr.classList.add("draggable");
+        tr.draggable = true;
+        tr.ondragstart = e => e.dataTransfer.setData("text/plain", index);
+        tr.ondragover = e => e.preventDefault();
+        tr.ondrop = e => {
+          const from = parseInt(e.dataTransfer.getData("text/plain"));
+          const to = index;
+          const temp = hinrunde[from];
+          hinrunde[from] = hinrunde[to];
+          hinrunde[to] = temp;
+          syncRueckrunde();
+          renderPairings();
+          renderResultsTable();
+        };
+
+        tr.innerHTML = `
+          <td>Spiel ${index + 1}</td>
+          <td>${pair.nameA}</td>
+          <td><input class="score" type="number" min="0" placeholder="0" value="${pair.scoreA !== undefined ? pair.scoreA : ''}" oninput="setScore('hinrunde', ${index}, 'A', this.value)"></td>
+          <td><input class="score" type="number" min="0" placeholder="0" value="${pair.scoreB !== undefined ? pair.scoreB : ''}" oninput="setScore('hinrunde', ${index}, 'B', this.value)"></td>
+          <td>${pair.nameB}</td>
+          <td>
+            <select class="winner-select" onchange="setWinner('hinrunde', ${index}, this.value)">
+              <option value="">–</option>
+              <option value="${pair.idA}" ${pair.winner===pair.idA ? 'selected':''}>${pair.nameA}</option>
+              <option value="${pair.idB}" ${pair.winner===pair.idB ? 'selected':''}>${pair.nameB}</option>
+            </select>
+          </td>
+        `;
+        hinBody.appendChild(tr);
+      });
+
+      // Rückrunde (ohne Drag&Drop)
+      rueckrunde.forEach((pair, index) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>Spiel ${index + 1}</td>
+          <td>${pair.nameA}</td>
+          <td><input class="score" type="number" min="0" placeholder="0" value="${pair.scoreA !== undefined ? pair.scoreA : ''}" oninput="setScore('rueckrunde', ${index}, 'A', this.value)"></td>
+          <td><input class="score" type="number" min="0" placeholder="0" value="${pair.scoreB !== undefined ? pair.scoreB : ''}" oninput="setScore('rueckrunde', ${index}, 'B', this.value)"></td>
+          <td>${pair.nameB}</td>
+          <td>
+            <select class="winner-select" onchange="setWinner('rueckrunde', ${index}, this.value)">
+              <option value="">–</option>
+              <option value="${pair.idA}" ${pair.winner===pair.idA ? 'selected':''}>${pair.nameA}</option>
+              <option value="${pair.idB}" ${pair.winner===pair.idB ? 'selected':''}>${pair.nameB}</option>
+            </select>
+          </td>
+        `;
+        rueckBody.appendChild(tr);
+      });
+    }
+
+    function syncRueckrunde() {
+      // Rückrunde spiegelt Hinrunde 1:1 mit Seitenwechsel, übernimmt KEINE Scores/Winner
+      rueckrunde = hinrunde.map(pair => ({
+        idA: pair.idB,
+        idB: pair.idA,
+        nameA: players.find(p => p.id === pair.idB)?.name || "Unbekannt",
+        nameB: players.find(p => p.id === pair.idA)?.name || "Unbekannt",
+        winner: "", scoreA: "", scoreB: ""
+      }));
+    }
+
+    // === Ergebnisse setzen ===
+
+    function setScore(runde, index, side, rawVal) {
+      const list = (runde === 'hinrunde') ? hinrunde : rueckrunde;
+      const pair = list[index];
+      const val = rawVal === '' ? '' : Math.max(0, parseInt(rawVal, 10) || 0);
+
+      if (side === 'A') pair.scoreA = val;
+      if (side === 'B') pair.scoreB = val;
+
+      // Automatische Siegerbestimmung, wenn beide Scores vorhanden und ungleich
+      if (pair.scoreA !== '' && pair.scoreB !== '' && !Number.isNaN(pair.scoreA) && !Number.isNaN(pair.scoreB)) {
+        if (pair.scoreA > pair.scoreB) {
+          pair.winner = pair.idA;
+        } else if (pair.scoreB > pair.scoreA) {
+          pair.winner = pair.idB;
+        } else {
+          // Unentschieden -> kein Sieger automatisch
+          pair.winner = "";
+        }
+      } else {
+        // Unvollständig -> Sieger bleibt wie gewählt (kein Autoreset)
+      }
+
+      renderPairings();
+      updateStats();
+      renderResultsTable();
+    }
+
+    function setWinner(runde, index, winnerId) {
+      const list = (runde === 'hinrunde') ? hinrunde : rueckrunde;
+      const pair = list[index];
+      pair.winner = winnerId || "";
+
+      updateStats();
+      renderPairings(); // um ggf. Select-Status zu aktualisieren
+      renderResultsTable();
+    }
+
+    function resetAllResults() {
+      if (!confirm('Alle Ergebnisse (Scores & Sieger) wirklich löschen?')) return;
+      [...hinrunde, ...rueckrunde].forEach(pair => {
+        pair.scoreA = "";
+        pair.scoreB = "";
+        pair.winner = "";
+      });
+      updateStats();
+      renderPairings();
+      renderResultsTable();
+    }
+
+    // === Auswertung ===
+    function updateStats() {
+      players.forEach(p => { p.spiele = 0; p.siege = 0; p.niederlagen = 0; });
+
+      // Nur Matches mit gesetztem Sieger zählen als "gespielt"
+      const allPairs = [...hinrunde, ...rueckrunde];
+      allPairs.forEach(pair => {
+        if (pair.winner) {
+          const pA = players.find(p => p.id === pair.idA);
+          const pB = players.find(p => p.id === pair.idB);
+          if (pA && pB) {
+            pA.spiele++; pB.spiele++;
+            if (pair.winner === pA.id) { pA.siege++; pB.niederlagen++; }
+            else if (pair.winner === pB.id) { pB.siege++; pA.niederlagen++; }
           }
         }
-      }
-      return { ok: true };
+      });
+
+      updatePlayersTable();
     }
-    function generateFairSchedule(fixtures, players, options = {}) {
-      const maxWait = options.maxWait ?? 2;
-      const maxConsec = options.maxConsec ?? 2;
-      const previousMatch = options.previousMatch ?? null;
-      const avoidImmediateRematch = options.avoidImmediateRematch ?? !!previousMatch;
 
-      const wait = new Map(players.map(p => [p, 0]));
-      const consec = new Map(players.map(p => [p, 0]));
+    function renderResultsTable() {
+      // Aggregation ist bereits in players.* enthalten – hier nur Darstellung
+      const tbody = document.querySelector('#resultsTable tbody');
+      tbody.innerHTML = '';
 
-      let remaining = shuffle(fixtures.map(([a, b]) => [a, b]));
-      const fixturesSet = new Set(remaining.map(([a, b]) => toKey(a, b)));
-      const schedule = [];
+      // Alphabetisch nach Name anzeigen
+      const sorted = players.slice().sort((a,b) => a.name.localeCompare(b.name, 'de'));
+      for (const p of sorted) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="right">${p.name}</td>
+          <td>${p.spiele}</td>
+          <td>${p.siege}</td>
+          <td>${p.niederlagen}</td>
+        `;
+        tbody.appendChild(tr);
+      }
+    }
 
-      const samePairIgnoreOrder = (x, y) => {
-        if (!x || !y) return false;
-        const [a1, b1] = x, [a2, b2] = y;
-        return (a1 === a2 && b1 === b2) || (a1 === b2 && b1 === a2);
-      };
+    // === Deine existierende Shuffle-Funktion bleibt erhalten ===
+    function shufflePairingsWithConstraint() {
+      if (hinrunde.length === 0) return;
 
-      const canPlace = (a, b, isFirst) => {
-        if ((consec.get(a) || 0) >= maxConsec) return false;
-        if ((consec.get(b) || 0) >= maxConsec) return false;
+      let shuffled = [...hinrunde];
 
-        const mustPlayers = players.filter(p => (wait.get(p) || 0) >= maxWait);
-        if (mustPlayers.length > 2) return false;
-        if (mustPlayers.length === 2) {
-          const [m1, m2] = mustPlayers;
-          if (!((a === m1 && b === m2) || (a === m2 && b === m1))) return false;
-        } else if (mustPlayers.length === 1) {
-          const m = mustPlayers[0];
-          if (!(a === m || b === m)) return false;
-        }
-        if (avoidImmediateRematch && isFirst && previousMatch) {
-          if (samePairIgnoreOrder([a, b], previousMatch)) return false;
+      function isValidOrder(list) {
+        for (let i = 0; i < list.length - 2; i++) {
+          const a = list[i], b = list[i + 1], c = list[i + 2];
+          const playersA = [a.idA, a.idB];
+          const playersB = [b.idA, b.idB];
+          const playersC = [c.idA, c.idB];
+          if (playersA.some(p => playersB.includes(p)) &&
+              playersB.some(p => playersC.includes(p)) &&
+              playersA.some(p => playersC.includes(p))) {
+            return false;
+          }
         }
         return true;
-      };
+      }
 
-      function step() {
-        if (remaining.length === 0) return true;
-
-        const isFirst = schedule.length === 0;
-        const mustPlayers = players.filter(p => (wait.get(p) || 0) >= maxWait);
-        let candidates = [];
-
-        if (mustPlayers.length === 2) {
-          const [m1, m2] = mustPlayers;
-          const k = toKey(m1, m2);
-          if (fixturesSet.has(k) && canPlace(m1, m2, isFirst)) candidates = [[m1, m2]];
-          else return false;
-        } else if (mustPlayers.length === 1) {
-          const m = mustPlayers[0];
-          candidates = remaining.filter(([a, b]) => (a === m || b === m) && canPlace(a, b, isFirst));
-          candidates.sort((x, y) => {
-            const ox = x[0] === m ? x[1] : x[0];
-            const oy = y[0] === m ? y[1] : y[0];
-            return (wait.get(oy) || 0) - (wait.get(ox) || 0);
-          });
-        } else {
-          candidates = remaining.filter(([a, b]) => canPlace(a, b, isFirst));
-          candidates.sort((x, y) => {
-            const sx = (wait.get(x[0]) || 0) + (wait.get(x[1]) || 0);
-            const sy = (wait.get(y[0]) || 0) + (wait.get(y[1]) || 0);
-            return sy - sx;
-          });
-          const head = Math.max(1, Math.ceil(candidates.length * 0.6));
-          candidates = shuffle(candidates.slice(0, head)).concat(candidates.slice(head));
+      let attempts = 0;
+      do {
+        for (let i = shuffled.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
         }
+        attempts++;
+        if (attempts > 5000) break; // safety stop
+      } while (!isValidOrder(shuffled));
 
-        for (const [a, b] of candidates) {
-          // apply
-          schedule.push([a, b]);
-          const idx = remaining.findIndex(([x, y]) => (x === a && y === b) || (x === b && y === a));
-          remaining.splice(idx, 1);
-          fixturesSet.delete(toKey(a, b));
-
-          // snapshot & update
-          const prevWait = new Map(wait);
-          const prevConsec = new Map(consec);
-          for (const p of players) {
-            if (p === a || p === b) {
-              consec.set(p, (consec.get(p) || 0) + 1);
-              wait.set(p, 0);
-            } else {
-              wait.set(p, (wait.get(p) || 0) + 1);
-              consec.set(p, 0);
-            }
-          }
-
-          const mustNow = players.filter(p => (wait.get(p) || 0) >= maxWait);
-          if (mustNow.length <= 2 && step()) return true;
-
-          // undo
-          wait.clear(); consec.clear();
-          for (const p of players) {
-            wait.set(p, prevWait.get(p) || 0);
-            consec.set(p, prevConsec.get(p) || 0);
-          }
-          remaining.splice(idx, 0, [a, b]);
-          fixturesSet.add(toKey(a, b));
-          schedule.pop();
-        }
-        return false;
-      }
-
-      const ok = step();
-      if (!ok) return null;
-
-      const v = validateSchedule(schedule, players, { maxWait, maxConsec });
-      if (!v.ok) return null;
-      return schedule;
+      hinrunde = shuffled;
+      syncRueckrunde();
+      renderPairings();
+      renderResultsTable();
     }
 
-    function fairWithRestarts(fixtures, players, options = {}, maxTries = 200) {
-      for (let i = 0; i < maxTries; i++) {
-        const s = generateFairSchedule(fixtures, players, options);
-        if (s) return s;
-      }
-      return null;
-    }
-
-    function generateRueckrundeFromHinrunde(hinrunde, players, options = {}) {
-      const reversedSides = hinrunde.map(([a, b]) => [b, a]);
-      const lastHin = hinrunde[hinrunde.length - 1] || null;
-      const rueck = fairWithRestarts(reversedSides, players, {
-        maxWait: options.maxWait ?? 2,
-        maxConsec: options.maxConsec ?? 2,
-        previousMatch: lastHin,
-        avoidImmediateRematch: true
-      }, 200);
-      return rueck || reversedSides;
-    }
-
-    /***************
-     * Rendering & Export
-     ***************/
-    function renderScheduleList(ol, schedule) {
-      ol.innerHTML = '';
-      for (const [a, b] of schedule) {
-        const li = document.createElement('li');
-        const left = document.createElement('div');
-        left.className = 'pair';
-        left.textContent = `${a} – ${b}`;
-        li.appendChild(left);
-        ol.appendChild(li);
-      }
-    }
-
-    function renderFull({ hinrunde, rueckrunde }) {
-      const olHin = document.getElementById('list-hinrunde');
-      const olRueck = document.getElementById('list-rueckrunde');
-      renderScheduleList(olHin, hinrunde);
-      renderScheduleList(olRueck, rueckrunde);
-
-      // Validierung kombiniert prüfen
-      const players = getPlayersFromUI();
-      const v1 = validateSchedule(hinrunde, players);
-      const v2 = validateSchedule(rueckrunde, players);
-      if (v1.ok && v2.ok) setValidBadge('ok', 'Plan gültig ✔');
-      else setValidBadge('err', (v1.error || v2.error || 'Fehler'));
-    }
-
-    function exportCSV(hin, rueck) {
-      const lines = [];
-      lines.push('Phase;Match;Spieler A;Spieler B');
-      let i = 1;
-      for (const [a, b] of hin) lines.push(`Hinrunde;${i++};${a};${b}`);
-      i = 1;
-      for (const [a, b] of rueck) lines.push(`Rückrunde;${i++};${a};${b}`);
-      const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const aEl = document.createElement('a');
-      aEl.href = url;
-      aEl.download = 'DartVader_Spielplan.csv';
-      aEl.click();
-      URL.revokeObjectURL(url);
-    }
-
-    /***************
-     * Button: Zufall/Fair
-     ***************/
-    document.getElementById('btnFairShuffle').addEventListener('click', () => {
-      const players = getPlayersFromUI();
-      if (!players || players.length < 2) {
-        setValidBadge('err', 'Mind. 2 Spieler erforderlich');
-        alert('Bitte mindestens 2 Teilnehmer eintragen.');
-        return;
-      }
-
-      // Alle Paarungen (Hinrunde)
-      const fixtures = createAllPairings(players);
-
-      // Faire Hinrunde (mit Restarts, um nahezu immer eine Lösung zu finden)
-      const hinrunde = fairWithRestarts(fixtures, players, { maxWait: 2, maxConsec: 2 }, 300);
-      if (!hinrunde) {
-        setValidBadge('err', 'Keine faire Hinrunde gefunden');
-        alert('Konnte keine faire Hinrunde berechnen. Versuch es erneut – die Start-Randomisierung variiert pro Klick.');
-        return;
-      }
-
-      // Faire Rückrunde (Seitenwechsel, kein direktes Rematch über die Halbzeitgrenze)
-      const rueckrunde = generateRueckrundeFromHinrunde(hinrunde, players, { maxWait: 2, maxConsec: 2 });
-
-      renderFull({ hinrunde, rueckrunde });
-      setValidBadge('ok', 'Plan gültig ✔');
-    });
-
-    document.getElementById('btnExportCSV').addEventListener('click', () => {
-      const olHin = document.getElementById('list-hinrunde');
-      const olRueck = document.getElementById('list-rueckrunde');
-      const read = (ol) => Array.from(ol.querySelectorAll('li .pair')).map(el => el.textContent.split(' – '));
-      const hin = read(olHin);
-      const rueck = read(olRueck);
-      if (!hin.length && !rueck.length) {
-        alert('Kein Spielplan vorhanden. Bitte zuerst „Zufall/Fair“ drücken.');
-        return;
-      }
-      exportCSV(hin, rueck);
-    });
-
-    /***************
-     * Init
-     ***************/
-    (function init() {
-      const players = loadPlayers();
-      renderPlayerInputs(players);
-      persistPlayersFromUI();
-      setValidBadge('warn', 'noch kein Plan');
-    })();
+    // === Init ===
+    window.onload = () => {
+      addPlayer("Spieler 1");
+      addPlayer("Spieler 2");
+      addPlayer("Spieler 3");
+      generatePairings();
+    };
   </script>
 </body>
