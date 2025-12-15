@@ -2,293 +2,202 @@
 <!doctype html>
 <html lang="de">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>DartVader Turnierplan</title>
-
-  <!-- Basis-Styles für deine Seite -->
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DartVader Turnierplan – Fairplay strikt (gespielt statt geplant)</title>
   <style>
-    :root { --fg:#111; --muted:#555; --border:#ddd; --bg:#fff; }
-    html,body{margin:0;padding:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;line-height:1.4}
-    main{max-width:1000px;margin:24px auto;padding:0 16px}
-    h1,h2,h3,h4{margin:0.6em 0}
-    table{width:100%;border-collapse:collapse;margin:8px 0 16px;border:1px solid var(--border)}
-    th,td{border:1px solid var(--border);padding:6px 8px;text-align:left;vertical-align:top}
-    small,em{color:var(--muted)}
-    .controls{display:flex;gap:12px;flex-wrap:wrap;margin:6px 0 8px}
-    .pill{display:inline-block;border:1px solid var(--border);border-radius:999px;padding:2px 8px;background:#f8f8f8}
-    .muted{color:var(--muted)}
-
-    /* — Widget oben rechts — */
-    #highest-throw{
-      position:fixed;top:12px;right:12px;z-index:9999;
-      border:1px solid #ddd;border-radius:8px;padding:12px;background:#fff;width:320px;
-      box-shadow:0 2px 10px rgba(0,0,0,.06);
-    }
-    #highest-throw h3{margin:0 0 6px 0;font-size:1.05rem}
-    #ht-status{color:#555;font-size:.85rem}
-    .ht-grid{display:grid;grid-template-columns:1fr;gap:8px;margin:8px 0}
-    .ht-field{display:flex;flex-direction:column;gap:6px}
-    .ht-field>span{font-size:.9rem;color:#555}
-    .ht-actions{display:flex;gap:8px;flex-wrap:wrap}
-    .btn-primary{background:#2a7;color:#fff;border:none;padding:8px 12px;border-radius:6px;cursor:pointer}
-    .btn-secondary{background:#eee;color:#333;border:1px solid #ccc;padding:8px 12px;border-radius:6px;cursor:pointer}
-    .btn-primary:hover{background:#268a60}.btn-secondary:hover{background:#e5e5e5}
-    #ht-current{font-size:.95rem;margin-top:8px}
-    #ht-current-line{margin-top:4px}
-    @media (max-width:560px){ #highest-throw{ position:static;width:auto;margin:8px } }
+    :root { --bg:#0f1221; --card:#1b1f36; --text:#e7e7f0; --muted:#b9bdd6; --accent:#7c4dff; --accent-2:#00c896; --warn:#ffb020; --danger:#ff5d5d; --grid:rgba(255,255,255,.08); }
+    html,body{ background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,'Helvetica Neue',Arial; }
+    body{ margin:0; padding:2rem; }
+    h1{ margin:0 0 .25rem 0; font-size:clamp(1.6rem,2.8vw,2.2rem);} .subtitle{ color:var(--muted); margin-bottom:1rem; }
+    .badge{ display:inline-flex; gap:.5rem; background:#14243a; border:1px solid var(--grid); color:#9ad0ff; padding:.4rem .6rem; border-radius:8px; font-size:.95rem; }
+    .container{ display:grid; grid-template-columns:1fr; gap:1rem;} @media(min-width:980px){ .container{ grid-template-columns:.9fr 1.1fr; }}
+    .card{ background:var(--card); border:1px solid var(--grid); border-radius:14px; padding:1rem; box-shadow:0 6px 20px rgba(0,0,0,.25);} .card h2{ margin-top:0; font-size:1.25rem; }
+    .toolbar{ display:flex; flex-wrap:wrap; gap:.5rem; margin-bottom:.75rem; }
+    button{ background:var(--accent); color:#fff; border:none; border-radius:10px; padding:.55rem .9rem; font-weight:600; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,.25);} .secondary{ background:#26355a; color:#e6e8f2;} .danger{ background:var(--danger);} button:disabled{ opacity:.55; cursor:not-allowed; }
+    input[type=text]{ background:#141a2c; color:var(--text); border:1px solid var(--grid); border-radius:9px; padding:.5rem .6rem; width:100%; }
+    table{ width:100%; border-collapse:collapse; } th,td{ border-bottom:1px solid var(--grid); padding:.5rem; text-align:left; } th{ color:#aeb4d8; font-weight:700; font-size:.95rem; } td{ font-size:.95rem; } tr:hover td{ background:rgba(255,255,255,.03); }
+    .grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:.75rem; }
+    .hint{ margin-top:.5rem; color:#ffc27a; } .ok{ color:var(--accent-2);} .warn-text{ color:var(--warn);} select{ background:#141a2c; color:var(--text); border:1px solid var(--grid); border-radius:9px; padding:.35rem .45rem; }
+    .footer{ margin-top:2rem; color:var(--muted); font-size:.9rem; }
   </style>
 </head>
 <body>
+</div>
+  <h1>DartVader Turnierplan</h1>
+  <div class="subtitle">Fairplay-Regeln <span class="ok">STRIKT</span>: niemand spielt <strong>2× in Folge</strong>, niemand wartet <strong>3× in Folge</strong>. Rückrunde automatisch; Grenze konfliktfrei.</div>
+  <div class="badge">⚡️ Fairplay aktiv</div>
 
-  <!-- 🔹 Widget: Höchster Wurf (oben rechts) -->
-  <section id="highest-throw" aria-label="Höchster Wurf">
-    <h3>🎯 Höchster Wurf</h3>
-    <small id="ht-status" aria-live="polite"></small>
-
-    <div class="ht-grid">
-      <label class="ht-field">
-        <span>Teilnehmer</span>
-        <select id="ht-player" aria-label="Teilnehmer auswählen"></select>
-      </label>
-
-      <label class="ht-field">
-        <span>Höchster Wurf (0–1000)</span>
-        <input type="number" id="ht-score" inputmode="numeric" min="0" max="1000" step="1" placeholder="z. B. 140">
-      </label>
+  <div class="container">
+    <div class="card">
+      <h2>Teilnehmer</h2>
+      <div class="toolbar">
+        <input id="newName" type="text" placeholder="Spielername" />
+        <button id="btnAdd">➕ Spieler hinzufügen</button>
+        <button id="btnReset">🧹 Ergebnisse zurücksetzen</button>
+      </div>
+      <table id="tblPlayers">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Gespielt</th>
+            <th>Siege</th>
+            <th>Niederlagen</th>
+            <th>Aktion</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <div class="hint">Tipp: Namen doppelklicken zum Bearbeiten.</div>
     </div>
 
-    <div class="ht-actions">
-      <button id="ht-save" class="btn-primary">Speichern</button>
-      <button id="ht-reset" class="btn-secondary" title="Eintrag löschen">Zurücksetzen</button>
+    <div class="card">
+      <h2>Spielplan</h2>
+      <div class="toolbar">
+        <button id="btnFair">🔄 Zufällige Paarungen (FAIR, strikt)</button>
+        <button class="secondary" id="btnShuffle">🔀 Reihenfolge mischen (FAIR beibehalten)</button>
+      </div>
+      <div id="rulesInfo" class="hint"></div>
+      <div class="grid-2">
+        <div>
+          <h3>Hinrunde</h3>
+          <table id="tblHin">
+            <thead>
+              <tr>
+                <th>#</th><th>Spieler A</th><th>Spieler B</th><th>Sieger</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div>
+          <h3>Rückrunde</h3>
+          <table id="tblRueck">
+            <thead>
+              <tr>
+                <th>#</th><th>Spieler A</th><th>Spieler B</th><th>Sieger</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
     </div>
+  </div>
 
-    <div id="ht-current">
-      <strong>Aktueller Eintrag:</strong>
-      <div id="ht-current-line">– noch kein Eintrag –</div>
-    </div>
-  </section>
-  <!-- 🔹 Ende Widget -->
+  <div class="footer">Made for DartVader • Lokale Speicherung aktiv</div>
 
-  <!-- Dein bisheriger Inhalt (aus deiner Datei übernommen) -->
-  <main>
-    <h1>DartVader Turnierplan – Fairplay strikt (gespielt statt geplant)</h1> <!-- [1](https://whegroup-my.sharepoint.com/personal/kai_freiberg_e-t-z_eu/Documents/Microsoft%20Copilot%20Chat-Dateien/index.html) -->
-    <h2>DartVader Turnierplan</h2> <!-- [1](https://whegroup-my.sharepoint.com/personal/kai_freiberg_e-t-z_eu/Documents/Microsoft%20Copilot%20Chat-Dateien/index.html) -->
+<script>
+const storeKey = 'dartvader_fair_v4';
+let state = { players: [], matchesHin: [], matchesRueck: [] };
+function id() { return Math.random().toString(36).slice(2,9); }
+function byId(arr, idv) { return arr.find(x => x.id === idv); }
+function nameOf(idv) { const p = byId(state.players, idv); return p ? p.name : '—'; }
 
-    <p>Fairplay-Regeln STRIKT: niemand spielt 2× in Folge, niemand wartet 3× in Folge. Rückrunde automatisch; Grenze konfliktfrei.</p> <!-- [1](https://whegroup-my.sharepoint.com/personal/kai_freiberg_e-t-z_eu/Documents/Microsoft%20Copilot%20Chat-Dateien/index.html) -->
-    <p class="pill">⚡️ Fairplay aktiv</p> <!-- [1](https://whegroup-my.sharepoint.com/personal/kai_freiberg_e-t-z_eu/Documents/Microsoft%20Copilot%20Chat-Dateien/index.html) -->
+function load() {
+  const raw = localStorage.getItem(storeKey);
+  if (raw) { try { state = JSON.parse(raw); } catch(e){} }
+  else {
+    state.players = [ {id:id(), name:'Kai'}, {id:id(), name:'Lena'}, {id:id(), name:'Tom'}, {id:id(), name:'Sara'} ];
+  }
+}
+function save(){ localStorage.setItem(storeKey, JSON.stringify(state)); }
 
-    <h3>Teilnehmer</h3> <!-- [1](https://whegroup-my.sharepoint.com/personal/kai_freiberg_e-t-z_eu/Documents/Microsoft%20Copilot%20Chat-Dateien/index.html) -->
+function renderPlayers(){
+  const tbody = document.querySelector('#tblPlayers tbody'); tbody.innerHTML='';
+  const stats = calcStats();
+  state.players.forEach(p => {
+    const tr = document.createElement('tr');
+    const tdName = document.createElement('td'); tdName.textContent = p.name; tdName.title='Doppelklick zum Bearbeiten'; tdName.ondblclick = () => editPlayerName(p.id, tdName);
+    const s = stats[p.id] || { games:0, wins:0, losses:0 };
+    const tdGames = el('td', s.games);
+    const tdWins = el('td', s.wins);
+    const tdLoss = el('td', s.losses);
+    const tdAct = document.createElement('td');
+    const btnDel = document.createElement('button'); btnDel.textContent='🗑️'; btnDel.className='danger'; btnDel.onclick = () => removePlayer(p.id);
+    tdAct.appendChild(btnDel);
+    tr.append(tdName, tdGames, tdWins, tdLoss, tdAct);
+    tbody.appendChild(tr);
+  });
+}
 
-    <div class="controls">
-      <span class="pill">➕ Spieler hinzufügen</span>
-      <span class="pill">🧹 Ergebnisse zurücksetzen</span>
-    </div> <!-- [1](https://whegroup-my.sharepoint.com/personal/kai_freiberg_e-t-z_eu/Documents/Microsoft%20Copilot%20Chat-Dateien/index.html) -->
+function renderMatches(){
+  const tbH = document.querySelector('#tblHin tbody');
+  const tbR = document.querySelector('#tblRueck tbody');
+  tbH.innerHTML=''; tbR.innerHTML='';
+  state.matchesHin.forEach((m,i)=>tbH.appendChild(matchRow(m,i+1)));
+  state.matchesRueck.forEach((m,i)=>tbR.appendChild(matchRow(m,i+1)));
+  const full=[...state.matchesHin,...state.matchesRueck];
+  const info=document.getElementById('rulesInfo');
+  const v=validateSequence(full, state.players.map(p=>p.id));
+  info.innerHTML = v.ok ? '<span class="ok">✔︎ Fairplay erfüllt:</span> niemand spielt 2× in Folge, niemand wartet 3× in Folge.' : `<span class="warn-text">⚠️</span> ${v.reason}`;
+}
 
-    <!-- Teilnehmer-Tabelle: erste Spalte "Name" wird vom Widget ausgelesen -->
-    <table id="teilnehmer">
-      <tr>
-        <th>Name</th>
-        <th>Gespielt</th>
-        <th>Siege</th>
-        <th>Niederlagen</th>
-        <th>Aktion</th>
-      </tr>
-      <!-- Beispielzeilen – füge hier deine Spieler hinzu:
-      <tr><td>Kai</td><td>0</td><td>0</td><td>0</td><td>–</td></tr>
-      <tr><td>Max</td><td>0</td><td>0</td><td>0</td><td>–</td></tr>
-      -->
-    </table> <!-- [1](https://whegroup-my.sharepoint.com/personal/kai_freiberg_e-t-z_eu/Documents/Microsoft%20Copilot%20Chat-Dateien/index.html) -->
+function matchRow(m, idx){
+  const tr=document.createElement('tr');
+  tr.appendChild(el('td', idx));
+  tr.appendChild(el('td', nameOf(m.aId)));
+  tr.appendChild(el('td', nameOf(m.bId)));
+  const tdWin=document.createElement('td');
+  const sel=document.createElement('select');
+  const optNone=new Option('—','');
+  const optA=new Option(nameOf(m.aId), m.aId);
+  const optB=new Option(nameOf(m.bId), m.bId);
+  sel.append(optNone,optA,optB);
+  sel.value = m.winnerId || '';
+  sel.onchange=(e)=>{ m.winnerId = e.target.value || null; save(); renderPlayers(); };
+  tdWin.appendChild(sel);
+  tr.appendChild(tdWin);
+  return tr;
+}
+function el(tag,text){ const x=document.createElement(tag); x.textContent=text; return x; }
 
-    <p class="muted">Tipp: Namen doppelklicken zum Bearbeiten.</p> <!-- [1](https://whegroup-my.sharepoint.com/personal/kai_freiberg_e-t-z_eu/Documents/Microsoft%20Copilot%20Chat-Dateien/index.html) -->
+// ======== Spieler ========
+function addPlayer(){ const inp=document.getElementById('newName'); const name=(inp.value||'').trim(); if(!name) return; state.players.push({id:id(), name}); inp.value=''; save(); renderPlayers(); }
+function removePlayer(pid){ state.players = state.players.filter(p=>p.id!==pid); for(const m of [...state.matchesHin,...state.matchesRueck]){ if(m.winnerId===pid) m.winnerId=null; }
+  state.matchesHin = state.matchesHin.filter(m=>m.aId!==pid && m.bId!==pid);
+  state.matchesRueck = state.matchesRueck.filter(m=>m.aId!==pid && m.bId!==pid);
+  save(); renderPlayers(); renderMatches(); }
+function editPlayerName(pid, cell){ const p=byId(state.players,pid); if(!p) return; const input=document.createElement('input'); input.type='text'; input.value=p.name; input.style.width='100%'; cell.innerHTML=''; cell.appendChild(input); input.focus(); input.onblur=()=>{ p.name=(input.value||p.name).trim(); save(); renderPlayers(); renderMatches(); }; input.onkeydown=(e)=>{ if(e.key==='Enter') input.blur(); }; }
+function resetResults(){ [...state.matchesHin,...state.matchesRueck].forEach(m=>m.winnerId=null); save(); renderPlayers(); renderMatches(); }
 
-    <h3>Spielplan</h3> <!-- [1](https://whegroup-my.sharepoint.com/personal/kai_freiberg_e-t-z_eu/Documents/Microsoft%20Copilot%20Chat-Dateien/index.html) -->
+// ======== Stats (NEU: nur gespielte Matches) ========
+function calcStats(){
+  const stats={}; state.players.forEach(p=>stats[p.id]={ games:0, wins:0, losses:0 });
+  for(const m of [...state.matchesHin, ...state.matchesRueck]){
+    if(!m.aId || !m.bId) continue;
+    if(m.winnerId){
+      stats[m.aId].games++; stats[m.bId].games++;
+      stats[m.winnerId].wins++;
+      const loser = m.winnerId === m.aId ? m.bId : m.aId;
+      stats[loser].losses++;
+    }
+  }
+  return stats;
+}
 
-    <div class="controls">
-      <span class="pill">🔄 Zufällige Paarungen (FAIR, strikt)</span>
-      <span class="pill">🔀 Reihenfolge mischen (FAIR beibehalten)</span>
-    </div> <!-- [1](https://whegroup-my.sharepoint.com/personal/kai_freiberg_e-t-z_eu/Documents/Microsoft%20Copilot%20Chat-Dateien/index.html) -->
+// ======== Paarungen & Fairplay ========
+function generatePairs(pids){ const pairs=[]; for(let i=0;i<pids.length;i++){ for(let j=i+1;j<pids.length;j++){ pairs.push({ aId:pids[i], bId:pids[j] }); } } return pairs; }
+function buildHinRueck(pids){ const hin=generatePairs(pids).map(x=>({id:id(), aId:x.aId, bId:x.bId, winnerId:null})); const rueck=generatePairs(pids).map(x=>({id:id(), aId:x.bId, bId:x.aId, winnerId:null})); return {hin, rueck}; }
+function nonConsecutive(prev,next){ if(!prev) return true; const s=new Set([prev.aId, prev.bId]); return !s.has(next.aId) && !s.has(next.bId); }
+function validateSequence(seq,pids){ for(let i=1;i<seq.length;i++){ if(!nonConsecutive(seq[i-1], seq[i])) return {ok:false, reason:`Verstoß: ${nameOf(seq[i-1].aId)} oder ${nameOf(seq[i-1].bId)} spielt 2× in Folge (Übergang ${i}→${i+1}).`}; }
+  const gaps={}; pids.forEach(pid=>gaps[pid]=0); for(let i=0;i<seq.length;i++){ const m=seq[i]; const inv=new Set([m.aId,m.bId]); pids.forEach(pid=>{ gaps[pid] = inv.has(pid) ? 0 : gaps[pid]+1; }); for(const pid of pids){ if(gaps[pid]>=3) return {ok:false, reason:`Verstoß: ${nameOf(pid)} wartet 3 Spiele in Folge (nach Spiel ${i+1}).`}; } } return {ok:true}; }
+function planFairOrder(all,pids){ const n=all.length; const used=new Array(n).fill(false); const order=new Array(n); const gaps={}; pids.forEach(pid=>gaps[pid]=0);
+  function score(prev,m){ if(!nonConsecutive(prev,m)) return -Infinity; let sc=0; for(const pid of pids){ const inv=(pid===m.aId||pid===m.bId); const g=inv?0:(gaps[pid]+1); if(g>=3) return -Infinity; sc+=g; } sc -= (gaps[m.aId]+gaps[m.bId])*2; return -sc; }
+  function dfs(pos,prev){ if(pos===n) return true; const cand=[]; for(let i=0;i<n;i++) if(!used[i]) cand.push({idx:i,m:all[i],score:score(prev,all[i])}); cand.sort((a,b)=>b.score-a.score);
+    for(const c of cand){ if(c.score===-Infinity) continue; const m=c.m; used[c.idx]=true; order[pos]=m; const backup={}; pids.forEach(pid=>backup[pid]=gaps[pid]); const inv=new Set([m.aId,m.bId]); for(const pid of pids){ gaps[pid] = inv.has(pid) ? 0 : (gaps[pid]+1); } let ok=true; for(const pid of pids){ if(gaps[pid]>=3){ ok=false; break; } } if(ok && dfs(pos+1,m)) return true; used[c.idx]=false; order[pos]=null; for(const pid of pids) gaps[pid]=backup[pid]; }
+    return false; }
+  return dfs(0,null) ? order : null; }
 
-    <h4>Hinrunde</h4>
-    <table>
-      <tr>
-        <th>#</th>
-        <th>Spieler A</th>
-        <th>Spieler B</th>
-        <th>Sieger</th>
-      </tr>
-    </table> <!-- [1](https://whegroup-my.sharepoint.com/personal/kai_freiberg_e-t-z_eu/Documents/Microsoft%20Copilot%20Chat-Dateien/index.html) -->
+function applyFairSchedule(){ const pids=state.players.map(p=>p.id); if(pids.length<4){ state.matchesHin=[]; state.matchesRueck=[]; alert("Mindestens 4 Spieler erforderlich, um die Fairplay-Regeln strikt einzuhalten (mit 3 Spielern ist 'kein 2× in Folge' mathematisch unmöglich)."); renderMatches(); return; }
+  const {hin,rueck}=buildHinRueck(pids); const combined=[...hin,...rueck]; const order=planFairOrder(combined,pids);
+  if(!order){ alert('Kein strikter Fairplay-Plan möglich mit der aktuellen Konstellation. Bitte Spieleranzahl prüfen.'); state.matchesHin=hin; state.matchesRueck=rueck; }
+  else { const hLen=hin.length; state.matchesHin=order.slice(0,hLen); state.matchesRueck=order.slice(hLen); }
+  save(); renderMatches(); renderPlayers(); }
 
-    <h4>Rückrunde</h4>
-    <table>
-      <tr>
-        <th>#</th>
-        <th>Spieler A</th>
-        <th>Spieler B</th>
-        <th>Sieger</th>
-      </tr>
-    </table> <!-- [1](https://whegroup-my.sharepoint.com/personal/kai_freiberg_e-t-z_eu/Documents/Microsoft%20Copilot%20Chat-Dateien/index.html) -->
+function shuffleKeepingFair(){ const pids=state.players.map(p=>p.id); const full=[...state.matchesHin,...state.matchesRueck]; for(let i=full.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [full[i],full[j]]=[full[j],full[i]]; } const order=planFairOrder(full,pids); if(!order){ alert('Shuffle konnte Fairplay nicht halten – Plan bleibt unverändert.'); return; } const hLen=state.matchesHin.length; state.matchesHin=order.slice(0,hLen); state.matchesRueck=order.slice(hLen); save(); renderMatches(); renderPlayers(); }
 
-    <p class="muted">Made for DartVader • Lokale Speicherung aktiv</p> <!-- [1](https://whegroup-my.sharepoint.com/personal/kai_freiberg_e-t-z_eu/Documents/Microsoft%20Copilot%20Chat-Dateien/index.html) -->
-  </main>
-
-  <!-- Logik für das Widget (ohne Template-Strings, sehr kompatibel) -->
-  <script>
-    (function(){
-      var STORAGE_KEY = 'dartHighestNoDateV1';
-      var ONLY_UPDATE_IF_HIGHER = true;
-
-      function $(sel){ return document.querySelector(sel); }
-      function normalizeName(s){ return (s || '').toString().trim(); }
-      function uniqSorted(arr){
-        var map = {}; var out = [];
-        for (var i=0;i<arr.length;i++){
-          var n = normalizeName(arr[i]); if(!n) continue;
-          if(!map[n]){ map[n]=1; out.push(n); }
-        }
-        out.sort(function(a,b){ return a.localeCompare(b,'de'); });
-        return out;
-      }
-
-      function readStorage(){
-        try { var raw = localStorage.getItem(STORAGE_KEY); return raw ? JSON.parse(raw) : null; }
-        catch(e){ return null; }
-      }
-      function writeStorage(obj){
-        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(obj)); } catch(e){}
-      }
-
-      function findPlayersFromTable(){
-        // Suche erste Tabelle mit Header "Name"
-        var tables = document.querySelectorAll('table');
-        for (var t=0; t<tables.length; t++){
-          var table = tables[t];
-          var heads = table.querySelectorAll('thead th');
-          var hasThead = heads.length > 0;
-          var headerCells = hasThead ? heads : table.querySelectorAll('tr:first-child th');
-          var hasName = false;
-          for (var h=0; h<headerCells.length; h++){
-            var txt = (headerCells[h].textContent || '').trim();
-            if (/(^|\s)name(\s|$)/i.test(txt)) { hasName = true; break; }
-          }
-          if (!hasName) continue;
-
-          var rows = table.querySelectorAll('tbody tr');
-          var useGeneric = rows.length === 0;
-          var dataRows = useGeneric ? table.querySelectorAll('tr') : rows;
-          var names = [];
-          for (var r=useGeneric?1:0; r<dataRows.length; r++){ // starte bei 1 wenn kein tbody => Header überspringen
-            var row = dataRows[r];
-            var cell = row.querySelector('td, th');
-            if (!cell) continue;
-            var name = cell.textContent.replace(/\s+/g,' ').trim();
-            if (name) names.push(name);
-          }
-          if (names.length) return uniqSorted(names);
-        }
-        return [];
-      }
-
-      function populatePlayers(){
-        var select = $('#ht-player');
-        var status = $('#ht-status');
-        var players = findPlayersFromTable();
-        // leeren
-        while (select.firstChild) select.removeChild(select.firstChild);
-
-        if (players.length === 0){
-          var opt = document.createElement('option');
-          opt.value = ''; opt.textContent = '— keine Spieler gefunden —';
-          select.appendChild(opt);
-          select.disabled = true;
-          status.textContent = 'Spielerliste: nicht gefunden (prüfe Spaltenkopf "Name").';
-          return;
-        }
-        for (var i=0;i<players.length;i++){
-          var op = document.createElement('option');
-          op.value = players[i];
-          op.textContent = players[i];
-          select.appendChild(op);
-        }
-        select.disabled = false;
-        status.textContent = 'Spielerliste aus Tabelle geladen.';
-      }
-
-      function renderCurrent(){
-        var line = $('#ht-current-line');
-        var rec = readStorage();
-        if (rec && rec.name && typeof rec.score === 'number' && isFinite(rec.score)){
-          line.textContent = rec.score + ' – ' + rec.name;
-        } else {
-          line.textContent = '– noch kein Eintrag –';
-        }
-      }
-
-      function save(){
-        var status = $('#ht-status');
-        var name  = normalizeName($('#ht-player').value);
-        var score = Number($('#ht-score').value);
-        if (!name){ alert('Bitte Teilnehmer wählen.'); return; }
-        if (!isFinite(score) || score < 0 || score > 1000){ alert('Bitte gültige Punktzahl (0–1000) eintragen.'); return; }
-
-        var current = readStorage();
-        if (!ONLY_UPDATE_IF_HIGHER || !current || score > current.score){
-          writeStorage({ name: name, score: score });
-          status.textContent = ONLY_UPDATE_IF_HIGHER ? 'Rekord aktualisiert ✅' : 'Eintrag gespeichert.';
-          $('#ht-score').value = '';
-          renderCurrent();
-        } else {
-          status.textContent = 'Kein Update: ' + score + ' < ' + current.score + ' (aktueller Wert)';
-        }
-      }
-
-      function resetEntry(){
-        if (confirm('Eintrag wirklich löschen?')){
-          localStorage.removeItem(STORAGE_KEY);
-          $('#ht-status').textContent = 'Eintrag gelöscht 🗑️';
-          renderCurrent();
-        }
-      }
-
-      function watchPlayers(){
-        // Aktualisiert Dropdown bei Änderungen in der Tabelle (Spieler hinzufügen/ändern)
-        var mo = new MutationObserver(function(muts){
-          var needUpdate = false;
-          for (var i=0;i<muts.length;i++){
-            var m = muts[i];
-            if (m.type === 'childList' || m.type === 'characterData'){
-              needUpdate = true; break;
-            }
-          }
-          if (needUpdate){
-            var prev = $('#ht-player').value;
-            populatePlayers();
-            if (prev){
-              var opts = $('#ht-player').options;
-              for (var j=0;j<opts.length;j++){
-                if (opts[j].value === prev){ $('#ht-player').value = prev; break; }
-              }
-            }
-          }
-        });
-        mo.observe(document.body, { childList:true, subtree:true, characterData:true });
-      }
-
-      // Init nach DOM bereit
-      function init(){
-        populatePlayers();
-        watchPlayers();
-        renderCurrent();
-        $('#ht-save').addEventListener('click', save);
-        $('#ht-reset').addEventListener('click', resetEntry);
-      }
-
-      if (document.readyState === 'loading'){
-        document.addEventListener('DOMContentLoaded', init, { once:true });
-      } else {
-        init();
-      }
-    })();
-  </script>
+function bind(){ document.getElementById('btnAdd').onclick=addPlayer; document.getElementById('btnReset').onclick=resetResults; document.getElementById('btnFair').onclick=applyFairSchedule; document.getElementById('btnShuffle').onclick=shuffleKeepingFair; }
+load(); bind(); renderPlayers(); renderMatches();
+</script>
 </body>
-</html>
