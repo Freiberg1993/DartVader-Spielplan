@@ -23,6 +23,31 @@
   </style>
 </head>
 <body>
+  
+<!-- Höchster Tageswurf – Widget (greift auf vorhandene Teilnehmer zu) -->
+<div id="dv-tageswurf" class="dv-card" aria-labelledby="dv-title">
+  <h3 id="dv-title" class="dv-title">Höchster Tageswurf</h3>
+
+  <div class="dv-row">
+    <label class="dv-field">
+      <span class="dv-label">Teilnehmer</span>
+      <select id="dv-player" class="dv-select" aria-label="Teilnehmer wählen">
+        <!-- wird per JS aus der bestehenden Teilnehmerliste befüllt -->
+      </select>
+    </label>
+
+    <label class="dv-field">
+      <span class="dv-label">Wurf</span>
+      <input id="dv-score" class="dv-input" type="number" inputmode="numeric"
+             min="1" step="1" placeholder="z. B. 180" aria-label="Tageswurf">
+    </label>
+
+    <button id="dv-save" class="dv-btn">Speichern</button>
+  </div>
+
+  <p id="dv-current" class="dv-current">Noch kein Eintrag.</p>
+</
+
 </div>
   <h1>DartVader Turnierplan</h1>
   <div class="subtitle">Fairplay-Regeln <span class="ok">STRIKT</span>: niemand spielt <strong>2× in Folge</strong>, niemand wartet <strong>3× in Folge</strong>. Rückrunde automatisch; Grenze konfliktfrei.</div>
