@@ -1,0 +1,618 @@
+
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DartVader Turnierplan – Fairplay strikt (gespielt statt geplant)</title>
+  <style>
+    :root { --bg:#0f1221; --card:#1b1f36; --text:#e7e7f0; --muted:#b9bdd6; --accent:#7c4dff; --accent-2:#00c896; --warn:#ffb020; --danger:#ff5d5d; --grid:rgba(255,255,255,.08); }
+    html,body{ background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,'Helvetica Neue',Arial; }
+    body{ margin:0; padding:2rem; }
+    h1{ margin:0 0 .25rem 0; font-size:clamp(1.6rem,2.8vw,2.2rem);} .subtitle{ color:var(--muted); margin-bottom:1rem; }
+    .badge{ display:inline-flex; gap:.5rem; background:#14243a; border:1px solid var(--grid); color:#9ad0ff; padding:.4rem .6rem; border-radius:8px; font-size:.95rem; }
+    .container{ display:grid; grid-template-columns:1fr; gap:1rem;} @media(min-width:980px){ .container{ grid-template-columns:.9fr 1.1fr; }}
+    .card{ background:var(--card); border:1px solid var(--grid); border-radius:14px; padding:1rem; box-shadow:0 6px 20px rgba(0,0,0,.25);} .card h2{ margin-top:0; font-size:1.25rem; }
+    .toolbar{ display:flex; flex-wrap:wrap; gap:.5rem; margin-bottom:.75rem; }
+    button{ background:var(--accent); color:#fff; border:none; border-radius:10px; padding:.55rem .9rem; font-weight:600; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,.25);} .secondary{ background:#26355a; color:#e6e8f2;} .danger{ background:var(--danger);} button:disabled{ opacity:.55; cursor:not-allowed; }
+    input[type=text]{ background:#141a2c; color:var(--text); border:1px solid var(--grid); border-radius:9px; padding:.5rem .6rem; width:100%; }
+    table{ width:100%; border-collapse:collapse; } th,td{ border-bottom:1px solid var(--grid); padding:.5rem; text-align:left; } th{ color:#aeb4d8; font-weight:700; font-size:.95rem; } td{ font-size:.95rem; } tr:hover td{ background:rgba(255,255,255,.03); }
+    .grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:.75rem; }
+    .hint{ margin-top:.5rem; color:#ffc27a; } .ok{ color:var(--accent-2);} .warn-text{ color:var(--warn);} select{ background:#141a2c; color:var(--text); border:1px solid var(--grid); border-radius:9px; padding:.35rem .45rem; }
+    .footer{ margin-top:2rem; color:var(--muted); font-size:.9rem; }
+  </style>
+</head>
+<body>
+</div>
+  <h1>DartVader Turnierplan</h1>
+  <div class="subtitle">Fairplay-Regeln <span class="ok">STRIKT</span>: niemand spielt <strong>2× in Folge</strong>, niemand wartet <strong>3× in Folge</strong>. Rückrunde automatisch; Grenze konfliktfrei.</div>
+  <div class="badge">⚡️ Fairplay aktiv</div>
+
+  <div class="container">
+    <div class="card">
+      <h2>Teilnehmer</h2>
+      <div class="toolbar">
+        <input id="newName" type="text" placeholder="Spielername" />
+        <button id="btnAdd">➕ Spieler hinzufügen</button>
+        <button id="btnReset">🧹 Ergebnisse zurücksetzen</button>
+      </div>
+      <table id="tblPlayers">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Gespielt</th>
+            <th>Siege</th>
+            <th>Niederlagen</th>
+            <th>Aktion</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <div class="hint">Tipp: Namen doppelklicken zum Bearbeiten.</div>
+    </div>
+
+    <div class="card">
+      <h2>Spielplan</h2>
+      <div class="toolbar">
+        <button id="btnFair">🔄 Zufällige Paarungen (FAIR, strikt)</button>
+        <button class="secondary" id="btnShuffle">🔀 Reihenfolge mischen (FAIR beibehalten)</button>
+      </div>
+      <div id="rulesInfo" class="hint"></div>
+      <div class="grid-2">
+        <div>
+          <h3>Hinrunde</h3>
+          <table id="tblHin">
+            <thead>
+              <tr>
+                <th>#</th><th>Spieler A</th><th>Spieler B</th><th>Sieger</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div>
+          <h3>Rückrunde</h3>
+          <table id="tblRueck">
+            <thead>
+              <tr>
+                <th>#</th><th>Spieler A</th><th>Spieler B</th><th>Sieger</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">Made for DartVader • Lokale Speicherung aktiv</div>
+
+<script>
+const storeKey = 'dartvader_fair_v4';
+let state = { players: [], matchesHin: [], matchesRueck: [] };
+function id() { return Math.random().toString(36).slice(2,9); }
+function byId(arr, idv) { return arr.find(x => x.id === idv); }
+function nameOf(idv) { const p = byId(state.players, idv); return p ? p.name : '—'; }
+
+function load() {
+  const raw = localStorage.getItem(storeKey);
+  if (raw) { try { state = JSON.parse(raw); } catch(e){} }
+  else {
+    state.players = [ {id:id(), name:'Kai'}, {id:id(), name:'Lena'}, {id:id(), name:'Tom'}, {id:id(), name:'Sara'} ];
+  }
+}
+function save(){ localStorage.setItem(storeKey, JSON.stringify(state)); }
+
+function renderPlayers(){
+  const tbody = document.querySelector('#tblPlayers tbody'); tbody.innerHTML='';
+  const stats = calcStats();
+  state.players.forEach(p => {
+    const tr = document.createElement('tr');
+    const tdName = document.createElement('td'); tdName.textContent = p.name; tdName.title='Doppelklick zum Bearbeiten'; tdName.ondblclick = () => editPlayerName(p.id, tdName);
+    const s = stats[p.id] || { games:0, wins:0, losses:0 };
+    const tdGames = el('td', s.games);
+    const tdWins = el('td', s.wins);
+    const tdLoss = el('td', s.losses);
+    const tdAct = document.createElement('td');
+    const btnDel = document.createElement('button'); btnDel.textContent='🗑️'; btnDel.className='danger'; btnDel.onclick = () => removePlayer(p.id);
+    tdAct.appendChild(btnDel);
+    tr.append(tdName, tdGames, tdWins, tdLoss, tdAct);
+    tbody.appendChild(tr);
+  });
+}
+
+function renderMatches(){
+  const tbH = document.querySelector('#tblHin tbody');
+  const tbR = document.querySelector('#tblRueck tbody');
+  tbH.innerHTML=''; tbR.innerHTML='';
+  state.matchesHin.forEach((m,i)=>tbH.appendChild(matchRow(m,i+1)));
+  state.matchesRueck.forEach((m,i)=>tbR.appendChild(matchRow(m,i+1)));
+  const full=[...state.matchesHin,...state.matchesRueck];
+  const info=document.getElementById('rulesInfo');
+  const v=validateSequence(full, state.players.map(p=>p.id));
+  info.innerHTML = v.ok ? '<span class="ok">✔︎ Fairplay erfüllt:</span> niemand spielt 2× in Folge, niemand wartet 3× in Folge.' : `<span class="warn-text">⚠️</span> ${v.reason}`;
+}
+
+function matchRow(m, idx){
+  const tr=document.createElement('tr');
+  tr.appendChild(el('td', idx));
+  tr.appendChild(el('td', nameOf(m.aId)));
+  tr.appendChild(el('td', nameOf(m.bId)));
+  const tdWin=document.createElement('td');
+  const sel=document.createElement('select');
+  const optNone=new Option('—','');
+  const optA=new Option(nameOf(m.aId), m.aId);
+  const optB=new Option(nameOf(m.bId), m.bId);
+  sel.append(optNone,optA,optB);
+  sel.value = m.winnerId || '';
+  sel.onchange=(e)=>{ m.winnerId = e.target.value || null; save(); renderPlayers(); };
+  tdWin.appendChild(sel);
+  tr.appendChild(tdWin);
+  return tr;
+}
+function el(tag,text){ const x=document.createElement(tag); x.textContent=text; return x; }
+
+// ======== Spieler ========
+function addPlayer(){ const inp=document.getElementById('newName'); const name=(inp.value||'').trim(); if(!name) return; state.players.push({id:id(), name}); inp.value=''; save(); renderPlayers(); }
+function removePlayer(pid){ state.players = state.players.filter(p=>p.id!==pid); for(const m of [...state.matchesHin,...state.matchesRueck]){ if(m.winnerId===pid) m.winnerId=null; }
+  state.matchesHin = state.matchesHin.filter(m=>m.aId!==pid && m.bId!==pid);
+  state.matchesRueck = state.matchesRueck.filter(m=>m.aId!==pid && m.bId!==pid);
+  save(); renderPlayers(); renderMatches(); }
+function editPlayerName(pid, cell){ const p=byId(state.players,pid); if(!p) return; const input=document.createElement('input'); input.type='text'; input.value=p.name; input.style.width='100%'; cell.innerHTML=''; cell.appendChild(input); input.focus(); input.onblur=()=>{ p.name=(input.value||p.name).trim(); save(); renderPlayers(); renderMatches(); }; input.onkeydown=(e)=>{ if(e.key==='Enter') input.blur(); }; }
+function resetResults(){ [...state.matchesHin,...state.matchesRueck].forEach(m=>m.winnerId=null); save(); renderPlayers(); renderMatches(); }
+
+// ======== Stats (NEU: nur gespielte Matches) ========
+function calcStats(){
+  const stats={}; state.players.forEach(p=>stats[p.id]={ games:0, wins:0, losses:0 });
+  for(const m of [...state.matchesHin, ...state.matchesRueck]){
+    if(!m.aId || !m.bId) continue;
+    if(m.winnerId){
+      stats[m.aId].games++; stats[m.bId].games++;
+      stats[m.winnerId].wins++;
+      const loser = m.winnerId === m.aId ? m.bId : m.aId;
+      stats[loser].losses++;
+    }
+  }
+  return stats;
+}
+
+// ======== Paarungen & Fairplay ========
+function generatePairs(pids){ const pairs=[]; for(let i=0;i<pids.length;i++){ for(let j=i+1;j<pids.length;j++){ pairs.push({ aId:pids[i], bId:pids[j] }); } } return pairs; }
+function buildHinRueck(pids){ const hin=generatePairs(pids).map(x=>({id:id(), aId:x.aId, bId:x.bId, winnerId:null})); const rueck=generatePairs(pids).map(x=>({id:id(), aId:x.bId, bId:x.aId, winnerId:null})); return {hin, rueck}; }
+function nonConsecutive(prev,next){ if(!prev) return true; const s=new Set([prev.aId, prev.bId]); return !s.has(next.aId) && !s.has(next.bId); }
+function validateSequence(seq,pids){ for(let i=1;i<seq.length;i++){ if(!nonConsecutive(seq[i-1], seq[i])) return {ok:false, reason:`Verstoß: ${nameOf(seq[i-1].aId)} oder ${nameOf(seq[i-1].bId)} spielt 2× in Folge (Übergang ${i}→${i+1}).`}; }
+  const gaps={}; pids.forEach(pid=>gaps[pid]=0); for(let i=0;i<seq.length;i++){ const m=seq[i]; const inv=new Set([m.aId,m.bId]); pids.forEach(pid=>{ gaps[pid] = inv.has(pid) ? 0 : gaps[pid]+1; }); for(const pid of pids){ if(gaps[pid]>=3) return {ok:false, reason:`Verstoß: ${nameOf(pid)} wartet 3 Spiele in Folge (nach Spiel ${i+1}).`}; } } return {ok:true}; }
+function planFairOrder(all,pids){ const n=all.length; const used=new Array(n).fill(false); const order=new Array(n); const gaps={}; pids.forEach(pid=>gaps[pid]=0);
+  function score(prev,m){ if(!nonConsecutive(prev,m)) return -Infinity; let sc=0; for(const pid of pids){ const inv=(pid===m.aId||pid===m.bId); const g=inv?0:(gaps[pid]+1); if(g>=3) return -Infinity; sc+=g; } sc -= (gaps[m.aId]+gaps[m.bId])*2; return -sc; }
+  function dfs(pos,prev){ if(pos===n) return true; const cand=[]; for(let i=0;i<n;i++) if(!used[i]) cand.push({idx:i,m:all[i],score:score(prev,all[i])}); cand.sort((a,b)=>b.score-a.score);
+    for(const c of cand){ if(c.score===-Infinity) continue; const m=c.m; used[c.idx]=true; order[pos]=m; const backup={}; pids.forEach(pid=>backup[pid]=gaps[pid]); const inv=new Set([m.aId,m.bId]); for(const pid of pids){ gaps[pid] = inv.has(pid) ? 0 : (gaps[pid]+1); } let ok=true; for(const pid of pids){ if(gaps[pid]>=3){ ok=false; break; } } if(ok && dfs(pos+1,m)) return true; used[c.idx]=false; order[pos]=null; for(const pid of pids) gaps[pid]=backup[pid]; }
+    return false; }
+  return dfs(0,null) ? order : null; }
+
+function applyFairSchedule(){ const pids=state.players.map(p=>p.id); if(pids.length<4){ state.matchesHin=[]; state.matchesRueck=[]; alert("Mindestens 4 Spieler erforderlich, um die Fairplay-Regeln strikt einzuhalten (mit 3 Spielern ist 'kein 2× in Folge' mathematisch unmöglich)."); renderMatches(); return; }
+  const {hin,rueck}=buildHinRueck(pids); const combined=[...hin,...rueck]; const order=planFairOrder(combined,pids);
+  if(!order){ alert('Kein strikter Fairplay-Plan möglich mit der aktuellen Konstellation. Bitte Spieleranzahl prüfen.'); state.matchesHin=hin; state.matchesRueck=rueck; }
+  else { const hLen=hin.length; state.matchesHin=order.slice(0,hLen); state.matchesRueck=order.slice(hLen); }
+  save(); renderMatches(); renderPlayers(); }
+
+function shuffleKeepingFair(){ const pids=state.players.map(p=>p.id); const full=[...state.matchesHin,...state.matchesRueck]; for(let i=full.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [full[i],full[j]]=[full[j],full[i]]; } const order=planFairOrder(full,pids); if(!order){ alert('Shuffle konnte Fairplay nicht halten – Plan bleibt unverändert.'); return; } const hLen=state.matchesHin.length; state.matchesHin=order.slice(0,hLen); state.matchesRueck=order.slice(hLen); save(); renderMatches(); renderPlayers(); }
+
+function bind(){ document.getElementById('btnAdd').onclick=addPlayer; document.getElementById('btnReset').onclick=resetResults; document.getElementById('btnFair').onclick=applyFairSchedule; document.getElementById('btnShuffle').onclick=shuffleKeepingFair; }
+load(); bind(); renderPlayers(); renderMatches();
+</script>
+</body>
+
+
+<!-- ========================================= -->
+<!-- 🏆 Widget: Tages-Höchstwurf (lokal gespeichert, 0–1000) -->
+<section id="highscore-section" style="margin-top:2rem; padding:1rem; border:1px solid #ddd; border-radius:8px;">
+  <h3 style="margin-top:0;">🏆 Tages‑Höchstwurf</h3>
+  <p style="margin:0 0 1rem;">Erfasse den höchsten Wurf des Tages (0–1000). Einträge werden <strong>lokal im Browser</strong> gespeichert.</p>
+  <form id="highscore-form" style="display:flex; gap:0.75rem; flex-wrap:wrap; align-items:flex-end;">
+    <div style="flex:1 1 220px;">
+      <label for="hs-date" style="display:block; font-weight:600;">Datum</label>
+      <input type="date" id="hs-date" required style="width:100%; padding:0.5rem;">
+    </div>
+    <div style="flex:2 1 260px;">
+      <label for="hs-player" style="display:block; font-weight:600;">Teilnehmer</label>
+      <input type="text" id="hs-player" placeholder="z.B. Kai" required list="players-list" style="width:100%; padding:0.5rem;">
+      <datalist id="players-list"></datalist>
+    </div>
+    <div style="flex:1 1 160px;">
+      <label for="hs-score" style="display:block; font-weight:600;">Wurf</label>
+      <input type="number" id="hs-score" min="0" max="1000" step="1" placeholder="0–1000" required style="width:100%; padding:0.5rem;">
+    </div>
+    <button type="submit" style="padding:0.6rem 1rem; font-weight:600;">Speichern</button>
+    <button type="button" id="hs-reset" style="padding:0.6rem 1rem;">Alle löschen</button>
+  </form>
+
+  <details style="margin-top:1rem;">
+    <summary style="cursor:pointer; font-weight:600;">Letzte Einträge</summary>
+    <table id="hs-table" style="width:100%; border-collapse:collapse; margin-top:0.75rem;">
+      <thead>
+        <tr>
+          <th style="text-align:left; border-bottom:1px solid #ddd; padding:0.5rem;">Datum</th>
+          <th style="text-align:left; border-bottom:1px solid #ddd; padding:0.5rem;">Teilnehmer</th>
+          <th style="text-align:left; border-bottom:1px solid #ddd; padding:0.5rem;">Wurf</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </details>
+</section>
+
+<script>
+(function(){
+  const KEY = 'dartvader_highscore_v1';
+  const form = document.getElementById('highscore-form');
+  const dateEl = document.getElementById('hs-date');
+  const playerEl = document.getElementById('hs-player');
+  const scoreEl = document.getElementById('hs-score');
+  const resetBtn = document.getElementById('hs-reset');
+  const tableBody = document.querySelector('#hs-table tbody');
+  const playersList = document.getElementById('players-list');
+
+  const today = new Date();
+  const iso = today.toISOString().slice(0,10);
+  dateEl.value = iso;
+
+  const load = () => JSON.parse(localStorage.getItem(KEY) || '[]');
+  const save = (items) => localStorage.setItem(KEY, JSON.stringify(items));
+
+  function findParticipantsTable(){
+    const tables = Array.from(document.querySelectorAll('table'));
+    // Prefer table under heading "Teilnehmer"
+    const heads = Array.from(document.querySelectorAll('h1,h2,h3,h4'));
+    const teil = heads.find(h => h.textContent.toLowerCase().includes('teilnehmer'));
+    if (teil){
+      let el = teil.nextElementSibling;
+      while(el){ if (el.tagName==='TABLE') return el; el = el.nextElementSibling; }
+    }
+    // Fallback: first table
+    return tables[0] || null;
+  }
+
+  function getPlayerNames(){
+    const names = new Set();
+    const t = findParticipantsTable();
+    if (!t) return [];
+    const rows = t.tBodies.length ? Array.from(t.tBodies[0].rows) : Array.from(t.querySelectorAll('tr'));
+    rows.forEach(tr => { const td = tr.querySelector('td'); if (td){ const n = td.textContent.trim(); if(n) names.add(n); } });
+    return Array.from(names);
+  }
+
+  function syncPlayersDatalist(){
+    const names = getPlayerNames();
+    playersList.innerHTML = names.map(n => `<option value="${n}"></option>`).join('');
+  }
+
+  const participantsTable = findParticipantsTable();
+  if (participantsTable){
+    if (!participantsTable.tBodies.length) participantsTable.appendChild(document.createElement('tbody'));
+    const target = participantsTable.tBodies[0];
+    const mo = new MutationObserver(syncPlayersDatalist);
+    mo.observe(target, { childList: true, subtree: true, characterData: true });
+  }
+  playerEl.addEventListener('focus', syncPlayersDatalist);
+  window.addEventListener('playersUpdated', syncPlayersDatalist);
+  syncPlayersDatalist();
+
+  function render(){
+    const items = load().sort((a,b) => (a.date < b.date ? 1 : -1));
+    tableBody.innerHTML = items.map(i => {
+      return `<tr>
+        <td style=\"padding:0.5rem; border-bottom:1px solid #eee;\">${i.date}</td>
+        <td style=\"padding:0.5rem; border-bottom:1px solid #eee;\">${i.player}</td>
+        <td style=\"padding:0.5rem; border-bottom:1px solid #eee; font-weight:700;\">${i.score}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const date = dateEl.value;
+    const player = playerEl.value.trim();
+    let score = parseInt(scoreEl.value, 10);
+    if (!date || !player || isNaN(score)) return;
+    if (score < 0 || score > 1000) return; // Bereich 0..1000
+
+    const items = load();
+    const idx = items.findIndex(x => x.date === date);
+    const entry = {date, player, score};
+    if (idx >= 0) { if (score > items[idx].score) items[idx] = entry; }
+    else { items.push(entry); }
+    save(items);
+    render();
+    form.reset();
+    dateEl.value = iso;
+  });
+
+  resetBtn.addEventListener('click', () => {
+    if (confirm('Wirklich alle Höchstwürfe löschen?')) {
+      localStorage.removeItem(KEY);
+      render();
+    }
+  });
+
+  render();
+})();
+</script>
+<!-- /Widget Ende -->
+
+<!-- ========================================= -->
+<!-- 🎯 Spielplan-Generator + Drag-and-Drop (Hin & Rückrunde) -->
+<script>
+(function(){
+  function norm(s){ return (s||'').trim().toLowerCase(); }
+  function findTableByHeaders(headers){
+    const tables = Array.from(document.querySelectorAll('table'));
+    return tables.find(t => {
+      const ths = Array.from(t.querySelectorAll('th')).map(th => norm(th.textContent));
+      return headers.every(h => ths.includes(norm(h)));
+    });
+  }
+  const participantsTable = findTableByHeaders(['name','gespielt','siege','niederlagen','aktion']) || (function(){
+    const heads = Array.from(document.querySelectorAll('h1,h2,h3,h4'));
+    const teil = heads.find(h => norm(h.textContent).includes('teilnehmer'));
+    if (teil){ let el = teil.nextElementSibling; while(el){ if (el.tagName==='TABLE') return el; el = el.nextElementSibling; } }
+    return document.querySelector('table');
+  })();
+  const hinTable = findTableByHeaders(['#','spieler a','spieler b','sieger']) || findTableByHeaders(['\\#','spieler a','spieler b','sieger']);
+  const rueckTable = (function(){
+    const tables = Array.from(document.querySelectorAll('table'));
+    const matchTables = tables.filter(t => {
+      const ths = Array.from(t.querySelectorAll('th')).map(th => norm(th.textContent));
+      return ths.includes('spieler a') && ths.includes('spieler b') && ths.includes('sieger');
+    });
+    return matchTables.length > 1 ? matchTables[matchTables.length-1] : null;
+  })();
+  if (!hinTable || !rueckTable) return; // safety
+  [participantsTable, hinTable, rueckTable].forEach(t => { if (t && !t.tBodies.length){ t.appendChild(document.createElement('tbody')); } });
+
+  // Status-Badge vor Hinrunde
+  const statusBadge = document.createElement('div');
+  statusBadge.id = 'dv-status';
+  statusBadge.style.margin = '0.5rem 0';
+  statusBadge.textContent = '⚡️ Fairplay aktiv';
+  hinTable.parentElement.insertBefore(statusBadge, hinTable);
+
+  // Control-Bar mit Generieren/Mischen
+  const bar = document.createElement('div');
+  bar.style.display = 'flex'; bar.style.gap = '0.5rem'; bar.style.margin = '0.5rem 0 0.75rem';
+  bar.innerHTML = `
+    <button id="dv-generate" style="padding:0.45rem 0.75rem;">🔄 Zufällige Paarungen (FAIR wenn möglich)</button>
+    <button id="dv-shuffle" style="padding:0.45rem 0.75rem;">🔀 Reihenfolge mischen (Fair beibehalten)</button>
+  `;
+  hinTable.parentElement.insertBefore(bar, hinTable);
+
+  const KEY_PLAYERS = 'dartvader_players_v1';
+  const KEY_MATCHES = 'dartvader_matches_v1';
+
+  function tablePlayers(){
+    const names = [];
+    if (!participantsTable) return names;
+    const rows = Array.from(participantsTable.tBodies[0].rows);
+    rows.forEach(tr => { const td = tr.querySelector('td'); if (td){ const n = td.textContent.trim(); if(n) names.push(n); } });
+    return names;
+  }
+  function savePlayers(list){ localStorage.setItem(KEY_PLAYERS, JSON.stringify(list)); }
+  function loadPlayers(){ try { return JSON.parse(localStorage.getItem(KEY_PLAYERS)||'[]'); } catch(e){ return []; } }
+
+  // Falls keine Teilnehmer im DOM: Minimal-Eingabe anbieten
+  (function addFallbackPlayerInput(){
+    const current = tablePlayers();
+    if (current.length >= 2) return;
+    const info = document.createElement('details');
+    info.style.margin = '0.5rem 0';
+    info.innerHTML = `
+      <summary style="cursor:pointer;">Teilnehmer eingeben (nur falls Tabelle leer)</summary>
+      <div style="margin-top:0.5rem; display:flex; gap:0.5rem; flex-wrap:wrap;">
+        <input id="dv-manual-names" type="text" placeholder="z.B. Kai, Mara, Ben" style="flex:2 1 260px; padding:0.4rem; border:1px solid #ddd; border-radius:6px;">
+        <button id="dv-apply-names" style="padding:0.45rem 0.75rem;">Namen übernehmen</button>
+      </div>`;
+    participantsTable.parentElement.insertBefore(info, participantsTable);
+    const apply = info.querySelector('#dv-apply-names');
+    apply.addEventListener('click', ()=>{
+      const raw = info.querySelector('#dv-manual-names').value || '';
+      const names = raw.split(',').map(s=>s.trim()).filter(Boolean);
+      const body = participantsTable.tBodies[0];
+      names.forEach(n => { const tr = document.createElement('tr'); tr.innerHTML = `<td contenteditable="true">${n}</td><td>0</td><td>0</td><td>0</td><td></td>`; body.appendChild(tr); });
+      savePlayers(tablePlayers());
+      window.dispatchEvent(new Event('playersUpdated'));
+    });
+  })();
+
+  // Beobachte Änderungen in Teilnehmer-Tabelle
+  const moP = new MutationObserver(()=>{ savePlayers(tablePlayers()); window.dispatchEvent(new Event('playersUpdated')); });
+  moP.observe(participantsTable.tBodies[0], { childList:true, subtree:true, characterData:true });
+  participantsTable.addEventListener('input', e => { if (e.target && e.target.tagName==='TD'){ savePlayers(tablePlayers()); window.dispatchEvent(new Event('playersUpdated')); } });
+
+  // Round-Robin mit BYE
+  function roundRobin(players){
+    const p = players.slice();
+    if (p.length % 2 === 1) p.push(null); // BYE
+    const n = p.length; const half = n/2; const rounds = [];
+    for (let r=0; r<n-1; r++){
+      const pairs = [];
+      for (let i=0; i<half; i++){
+        const a = p[i]; const b = p[n-1-i];
+        if (a!==null && b!==null) pairs.push([a,b]);
+        else { const player = a!==null ? a : b; pairs.push([player, null]); }
+      }
+      rounds.push(pairs);
+      // rotate (first fixed)
+      const fixed = p[0]; const rest = p.slice(1);
+      rest.unshift(rest.pop());
+      p.splice(0, p.length, fixed, ...rest); // will fix below to JS spread
+    }
+    return rounds;
+  }
+</script>
+
+<script>
+(function(){
+  function norm(s){ return (s||'').trim().toLowerCase(); }
+  function findTableByHeaders(headers){
+    const tables = Array.from(document.querySelectorAll('table'));
+    return tables.find(t => {
+      const ths = Array.from(t.querySelectorAll('th')).map(th => norm(th.textContent));
+      return headers.every(h => ths.includes(norm(h)));
+    });
+  }
+  const hinTable = findTableByHeaders(['#','spieler a','spieler b','sieger']) || findTableByHeaders(['\\#','spieler a','spieler b','sieger']);
+  const rueckTable = (function(){
+    const tables = Array.from(document.querySelectorAll('table'));
+    const matchTables = tables.filter(t => {
+      const ths = Array.from(t.querySelectorAll('th')).map(th => norm(th.textContent));
+      return ths.includes('spieler a') && ths.includes('spieler b') && ths.includes('sieger');
+    });
+    return matchTables.length > 1 ? matchTables[matchTables.length-1] : null;
+  })();
+  if (!hinTable || !rueckTable) return;
+  [hinTable, rueckTable].forEach(t => { if (!t.tBodies.length){ t.appendChild(document.createElement('tbody')); } });
+
+  // Drag-and-Drop immer aktiv – auch für bereits vorhandene Zeilen
+  let draggedRow = null;
+  function makeRowsDraggable(t){
+    Array.from(t.tBodies[0].rows).forEach(tr => { tr.draggable = true; });
+  }
+  function enableDnd(t){
+    const body = t.tBodies[0];
+    body.addEventListener('dragstart', (e)=>{
+      const tr = e.target.closest('tr');
+      if (!tr) return; draggedRow = tr; e.dataTransfer.effectAllowed = 'move';
+    });
+    body.addEventListener('dragover', (e)=>{ e.preventDefault(); e.dataTransfer.dropEffect='move'; });
+    body.addEventListener('drop', (e)=>{
+      e.preventDefault(); const targetRow = e.target.closest('tr');
+      if (!draggedRow) return;
+      if (targetRow) body.insertBefore(draggedRow, targetRow.nextSibling); else body.appendChild(draggedRow);
+      draggedRow = null; renumber(hinTable); renumber(rueckTable); recomputeFairness(); persistOrder();
+    });
+    body.addEventListener('dragend', ()=>{ draggedRow = null; });
+  }
+  function renumber(t){ Array.from(t.tBodies[0].rows).forEach((tr,i)=>{ if (tr.cells[0]) tr.cells[0].textContent = i+1; }); }
+
+  // Fairness-Berechnung
+  const statusBadge = document.getElementById('dv-status');
+  const KEY_MATCHES = 'dartvader_matches_v1';
+  function fairnessScore(order){
+    let violations = 0; const playersSet = new Set();
+    order.forEach(m => { if (m.a) playersSet.add(m.a); if (m.b) playersSet.add(m.b); });
+    const players = Array.from(playersSet); const waits = {}; players.forEach(p => waits[p]=0);
+    for (let i=0; i<order.length; i++){
+      const m = order[i]; const a = m.a, b = m.b;
+      if (i>0){ const prev = order[i-1]; if (a && (prev.a===a || prev.b===a)) violations++; if (b && (prev.a===b || prev.b===b)) violations++; }
+      players.forEach(p => { const plays = (p===a) || (p===b); if (plays) waits[p]=0; else { waits[p]++; if (waits[p]>=3) violations++; } });
+    }
+    return violations;
+  }
+  function recomputeFairness(){
+    function readRows(t){ return Array.from(t.tBodies[0].rows).map(tr => ({ a: tr.cells[1]?.textContent.trim(), b: tr.cells[2]?.textContent.trim() })); }
+    const ord = readRows(hinTable).concat(readRows(rueckTable)).map(m => ({ a: m.a==='(BYE)'? null: m.a, b: m.b==='(BYE)'? null: m.b }));
+    const score = fairnessScore(ord);
+    if (statusBadge){ if (score===0){ statusBadge.textContent='⚡️ Fairplay aktiv'; statusBadge.style.color='#0a0'; } else { statusBadge.textContent='⚠️ Fairplay konnte nicht vollständig eingehalten werden – Spielplan trotzdem erstellt'; statusBadge.style.color='#c60'; } }
+  }
+  function persistOrder(){
+    const matches = [];
+    Array.from(hinTable.tBodies[0].rows).forEach(tr => matches.push({round:'Hinrunde', a: tr.cells[1]?.textContent, b: tr.cells[2]?.textContent}));
+    Array.from(rueckTable.tBodies[0].rows).forEach(tr => matches.push({round:'Rückrunde', a: tr.cells[1]?.textContent, b: tr.cells[2]?.textContent}));
+    localStorage.setItem(KEY_MATCHES, JSON.stringify(matches));
+  }
+  function loadOrder(){ try { return JSON.parse(localStorage.getItem(KEY_MATCHES)||'[]'); } catch(e){ return []; } }
+
+  // Render-Funktionen
+  function clearBody(t){ t.tBodies[0].innerHTML = ''; }
+  function addRow(t, id, a, b){
+    const tr = document.createElement('tr'); tr.draggable = true; tr.dataset.matchId = id;
+    const num = t.tBodies[0].rows.length + 1; const aName = (a===null? '(BYE)' : a); const bName = (b===null? '(BYE)' : b);
+    tr.innerHTML = `<td>${num}</td><td>${aName}</td><td>${bName}</td><td></td>`;
+    t.tBodies[0].appendChild(tr);
+  }
+
+  function renderOrder(order){
+    clearBody(hinTable); clearBody(rueckTable);
+    let h=1, r=1;
+    order.forEach(m => {
+      const dest = (m.round==='Hinrunde') ? hinTable : rueckTable;
+      addRow(dest, (m.round==='Hinrunde' ? 'H'+(h++) : 'R'+(r++)), (m.a==='(BYE)'?null:m.a), (m.b==='(BYE)'?null:m.b));
+    });
+    makeRowsDraggable(hinTable); makeRowsDraggable(rueckTable);
+    enableDnd(hinTable); enableDnd(rueckTable);
+    renumber(hinTable); renumber(rueckTable); recomputeFairness();
+  }
+
+  // Round-Robin (zweite Kopie aus erstem Script)
+  function roundRobin(players){
+    const p = players.slice(); if (p.length % 2 === 1) p.push(null);
+    const n = p.length, half = n/2, rounds = [];
+    for (let r=0; r<n-1; r++){
+      const pairs = [];
+      for (let i=0; i<half; i++){
+        const a = p[i], b = p[n-1-i];
+        if (a!==null && b!==null) pairs.push([a,b]); else { const player = a!==null ? a : b; pairs.push([player, null]); }
+      }
+      rounds.push(pairs);
+      const fixed = p[0]; const rest = p.slice(1); rest.unshift(rest.pop()); p.splice(0, p.length, fixed, ...rest);
+    }
+    return rounds;
+  }
+
+  function toMatchObjects(rounds){
+    const list = []; let h=1, r=1;
+    rounds.forEach(pairs => pairs.forEach(([A,B]) => list.push({ id:'H'+(h++), round:'Hinrunde', a:A, b:B })));
+    rounds.forEach(pairs => pairs.forEach(([A,B]) => list.push({ id:'R'+(r++), round:'Rückrunde', a:B, b:A })));
+    return list;
+  }
+  function tryFairShuffle(matches, attempts=1000){
+    let best = matches.slice(); let bestScore = fairnessScore(best.map(m=>({a:m.a,b:m.b})));
+    for (let k=0; k<attempts; k++){
+      const shuffled = matches.slice().sort(()=>Math.random()-0.5);
+      const score = fairnessScore(shuffled.map(m=>({a:m.a,b:m.b})));
+      if (score < bestScore){ best = shuffled; bestScore = score; }
+      if (score === 0) break;
+    }
+    return { order: best, score: bestScore };
+  }
+
+  function names(){
+    const fromStorage = loadOrder(); // if we have matches, keep names from storage matches
+    const players = (function(){
+      const rows = Array.from(participantsTable.tBodies[0].rows);
+      const list = rows.map(tr => (tr.querySelector('td')?.textContent||'').trim()).filter(Boolean);
+      return list.length ? list : JSON.parse(localStorage.getItem('dartvader_players_v1')||'[]');
+    })();
+    return players;
+  }
+
+  function generate(){
+    const players = names(); if (!players || players.length < 2) return;
+    const rounds = roundRobin(players); const matches = toMatchObjects(rounds);
+    const attempt = tryFairShuffle(matches, 1000);
+    renderOrder(attempt.order);
+    persistOrder();
+  }
+
+  function shuffle(){
+    const current = [];
+    Array.from(hinTable.tBodies[0].rows).forEach(tr => current.push({round:'Hinrunde', a: tr.cells[1].textContent.trim(), b: tr.cells[2].textContent.trim()}));
+    Array.from(rueckTable.tBodies[0].rows).forEach(tr => current.push({round:'Rückrunde', a: tr.cells[1].textContent.trim(), b: tr.cells[2].textContent.trim()}));
+    const attempt = tryFairShuffle(current, 1000);
+    renderOrder(attempt.order);
+    persistOrder();
+  }
+
+  document.getElementById('dv-generate')?.addEventListener('click', generate);
+  document.getElementById('dv-shuffle')?.addEventListener('click', shuffle);
+
+  // Initial: vorhandene Zeilen sofort draggable machen und Fairness prüfen
+  makeRowsDraggable(hinTable); makeRowsDraggable(rueckTable);
+  enableDnd(hinTable); enableDnd(rueckTable);
+  renumber(hinTable); renumber(rueckTable); recomputeFairness();
+
+  // Falls gespeicherte Reihenfolge existiert, laden
+  const saved = (function(){ try { return JSON.parse(localStorage.getItem('dartvader_matches_v1')||'[]'); } catch(e){ return []; } })();
+  if (saved.length) renderOrder(saved);
+})();
+</script>
+<!-- /Spielplan Ende -->
