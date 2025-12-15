@@ -1,4 +1,145 @@
 
+<!-- 🔹 Höchster Wurf – Widget (oben rechts, fixiert) -->
+<style>
+/* — Höchster Wurf Widget — */
+#highest-throw { 
+  position: fixed; 
+  top: 12px; 
+  right: 12px; 
+  z-index: 9999; 
+  border: 1px solid #ddd; 
+  border-radius: 8px; 
+  padding: 12px; 
+  background: #fff; 
+  width: 320px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+}
+#highest-throw h3 { margin: 0 0 6px 0; font-size: 1.05rem; }
+#ht-status { color: #555; font-size: .85rem; }
+.ht-grid { display: grid; grid-template-columns: 1fr; gap: 8px; margin: 8px 0; }
+.ht-field { display: flex; flex-direction: column; gap: 6px; }
+.ht-field > span { font-size: .9rem; color: #555; }
+.ht-actions { display:flex; gap:8px; flex-wrap:wrap; }
+.btn-primary { background:#2a7; color:#fff; border:none; padding:8px 12px; border-radius:6px; cursor:pointer; }
+.btn-secondary { background:#eee; color:#333; border:1px solid #ccc; padding:8px 12px; border-radius:6px; cursor:pointer; }
+.btn-primary:hover { background:#268a60; } .btn-secondary:hover { background:#e5e5e5; }
+#ht-current { font-size: .95rem; margin-top: 8px; }
+#ht-current-line { margin-top: 4px; }
+@media (max-width: 560px) {
+  #highest-throw { 
+    position: static; /* auf kleinen Screens nicht überlagern */
+    width: auto; 
+    margin: 8px; 
+  }
+}
+</style>
+
+<section id="highest-throw" aria-label="Höchster Wurf">
+  <h3>🎯 Höchster Wurf</h3>
+  <small id="ht-status" aria-live="polite"></small>
+
+  <div class="ht-grid">
+    <label class="ht-field">
+      <span>Teilnehmer</span>
+      <select id="ht-player" aria-label="Teilnehmer auswählen"></select>
+    </label>
+
+    <label class="ht-field">
+      <span>Höchster Wurf (0–1000)</span>
+      <input type="number" id="ht-score" inputmode="numeric" min="0" max="1000" step="1" placeholder="z. B. 140" />
+    </label>
+  </div>
+
+  <div class="ht-actions">
+    <button id="ht-save" class="btn-primary">Speichern</button>
+    <button id="ht-reset" class="btn-secondary" title="Eintrag löschen">Zurücksetzen</button>
+  </div>
+
+  <div id="ht-current">
+    <strong>Aktueller Eintrag:</strong>
+    <div id="ht-current-line">– noch kein Eintrag –</div>
+  </div>
+</section>
+
+<script>
+/* Höchster Wurf – (ohne Datum), v1 – oben rechts fixiert
+   - Dropdown wird aus der Teilnehmer-Tabelle befüllt (erste Spalte "Name").
+   - Speichert EINEN globalen Rekord in localStorage ('dartHighestNoDateV1').
+   - Standard: Nur überschreiben, wenn neuer Wert höher ist.
+*/
+(function() {
+  const CONFIG = {
+    playersTableSelector: 'table',        // nimmt die erste Tabelle mit Header "Name"
+    onlyUpdateIfHigher: true,             // auf false stellen, wenn IMMER überschrieben werden soll
+    storageKey: 'dartHighestNoDateV1'
+  };
+
+  const $ = (sel) => document.querySelector(sel);
+  const els = {
+    status: $('#ht-status'),
+    player: $('#ht-player'),
+    score:  $('#ht-score'),
+    save:   $('#ht-save'),
+    reset:  $('#ht-reset'),
+    currentLine: $('#ht-current-line')
+  };
+
+  function normalizeName(s){ return (s||'').toString().trim(); }
+  function uniqSorted(arr){ return Array.from(new Set(arr.map(normalizeName).filter(Boolean))).sort((a,b)=>a.localeCompare(b,'de')); }
+
+  function readStorage(){
+    try { const raw = localStorage.getItem(CONFIG.storageKey); return raw? JSON.parse(raw): null; }
+    catch(e){ console.warn('LS read error', e); return null; }
+  }
+  function writeStorage(obj){
+    try { localStorage.setItem(CONFIG.storageKey, JSON.stringify(obj)); }
+    catch(e){ console.warn('LS write error', e); }
+  }
+
+  // Teilnehmer aus erster Tabelle mit Header "Name"
+  function findPlayersFromTable(){
+    const tables = Array.from(document.querySelectorAll(CONFIG.playersTableSelector));
+    for (const table of tables) {
+      const ths = Array.from(table.querySelectorAll('thead th, tr:first-child th'));
+      const hasNameHeader = ths.some(th => /name/i.test((th.textContent||'').trim()));
+      if (!hasNameHeader) continue;
+
+      const rows = Array.from(table.querySelectorAll('tbody tr, tr')).slice(1); // Header überspringen
+      const names = rows.map(r => {
+        const cell = r.querySelector('td, th');
+        return cell ? cell.textContent.replace(/\s+/g,' ').trim() : '';
+      }).filter(Boolean);
+      if (names.length) return uniqSorted(names);
+    }
+    return [];
+  }
+
+  function populatePlayers(){
+    const players = findPlayersFromTable();
+    els.player.innerHTML = '';
+    if (!players.length) {
+      const opt = document.createElement('option');
+      opt.value = ''; opt.textContent = '— keine Spieler gefunden —';
+      els.player.appendChild(opt);
+      els.player.disabled = true;
+      els.status.textContent = 'Spielerliste: nicht gefunden (prüfe Tabellenspalte "Name").';
+      return;
+    }
+    for (const name of players) {
+      const opt = document.createElement('option');
+      opt.value = name; opt.textContent = name;
+      els.player.appendChild(opt);
+    }
+    els.player.disabled = false;
+    els.status.textContent = 'Spielerliste aus Tabelle geladen.';
+  }
+
+  // Beobachtet Änderungen (Spieler hinzufügen/ändern)
+  function watchPlayers(){
+    const mo = new MutationObserver((mutList)=>{
+      if (mutList.some(m => m.addedNodes.length || m.removedNodes.length || m.type === 'childList' || m.type === 'characterData')) {
+
 <!doctype html>
 <html lang="de">
 <head>
