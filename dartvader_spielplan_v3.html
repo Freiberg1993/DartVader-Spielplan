@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DartVader Spielplan – Dark Minimal v3</title>
+  <!-- VERSION: v3 (30-12-2025) — Enter-Fix + deutliches Dark-Minimal-Theme -->
+  <style>
+    :root{
+      --bg:#0b0c12; --panel:#121527; --panel-2:#151a30; --text:#f0f3f8; --muted:#9aa3bf; --accent:#79a1ff; --line:#242a44;
+      --chip:#1a2144; --btn:#1a2144; --btn-hover:#26306a; --ok:#2e8f59; --bad:#9d3a48; --warn:#9d7a32;
+    }
+    *{box-sizing:border-box}
+    html,body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,'Noto Sans',Arial; margin:0}
+    .wrap{max-width:1040px;margin:0 auto;padding:22px}
+    h1{font-size:1.7rem;margin:6px 0 4px 0}
+    .bar{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center}
+    .chip{background:var(--chip);border:1px solid var(--line);padding:.28rem .7rem;border-radius:999px;color:var(--muted);font-size:.86rem}
+    .grid{display:grid;gap:16px}
+    @media(min-width:900px){.grid-2{grid-template-columns:1fr 1fr}}
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px}
+    .card h5{margin:.35rem 0 .75rem 0;color:var(--muted);font-weight:600}
+    .btn{background:var(--btn);color:var(--text);border:1px solid var(--line);padding:.52rem .8rem;border-radius:8px;cursor:pointer}
+    .btn:hover{background:var(--btn-hover)}
+    .btn.bad{border-color:#6b2f3a;background:#3a2026}
+    .btn.warn{border-color:#6b5a2f;background:#3a2f21}
+    input,select{background:var(--panel-2);border:1px solid var(--line);color:var(--text);padding:.5rem .62rem;border-radius:8px}
+    input:focus,select:focus,button:focus{outline:2px solid #3d4a86; outline-offset:1px}
+    table{width:100%;border-collapse:collapse}
+    th,td{border-bottom:1px solid var(--line);padding:.55rem;text-align:left}
+    th{color:var(--muted);font-weight:600}
+    tr:last-child td{border-bottom:none}
+    .muted{color:var(--muted)}
+    .row{display:flex;gap:.55rem;flex-wrap:wrap}
+    .right{display:flex;justify-content:flex-end;gap:.55rem}
+    .caption{font-size:.92rem;color:var(--muted)}
+    .toast{position:fixed;right:18px;bottom:18px;background:#1c2242;color:#fff;border:1px solid var(--line);border-radius:10px;padding:.65rem .9rem;opacity:0;transform:translateY(8px);transition:.2s}
+    .toast.show{opacity:1;transform:translateY(0)}
+    .version{font-size:.8rem;color:#fff;background:#3b4782;border:1px solid #2a325e;border-radius:6px;padding:.1rem .4rem;margin-left:auto}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>🎯 DartVader Spielplan</h1>
+    <div class="bar">
+      <span class="chip">⚡️ Fairplay aktiv</span>
+      <span class="chip">Dark Minimal</span>
+      <span class="chip" id="storageInfo">Lokale Speicherung aktiv</span>
+      <span class="version">v3</span>
+    </div>
+
+    <div class="grid grid-2" style="margin-top:16px">
+      <section class="card" aria-labelledby="h_players">
+        <h5 id="h_players">👤 Teilnehmer hinzufügen</h5>
+        <!-- WICHTIG: Form um Enter-Semantik sicher zu stellen -->
+        <form id="playerForm" class="row" action="#" autocomplete="off">
+          <input id="playerName" name="playerName" placeholder="Neuer Spieler" autocomplete="name" />
+          <!-- type="button" verhindert Browser-Submit, wir nutzen Form-Submit bewusst -->
+          <button class="btn" id="addPlayer" type="submit" aria-label="Spieler hinzufügen">➕ Hinzufügen</button>
+          <button class="btn bad" id="clearPlayers" type="button" aria-label="Teilnehmerliste leeren">🗑️ Leeren</button>
+        </form>
+        <div class="caption" style="margin:.4rem 0 .2rem">Tipp: Name eingeben und <b>Enter</b> drücken.</div>
+        <h5 style="margin-top:10px">Teilnehmer</h5>
+        <div style="overflow:auto">
+          <table id="playersTable">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Gespielt</th>
+                <th>Siege</th>
+                <th>Niederlagen</th>
+                <th>Aktion</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="right" style="margin-top:8px">
+          <button class="btn warn" id="resetResults" type="button">🧹 Ergebnisse zurücksetzen</button>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="h_schedule">
+        <h5 id="h_schedule">🗓️ Spielplan</h5>
+        <div class="row" style="margin-bottom:8px">
+          <button class="btn" id="buildFair" type="button">🔁 Zufällige Paarungen (FAIR, strikt)</button>
+          <button class="btn" id="shuffleHin" type="button">🔀 Reihenfolge mischen (FAIR beibehalten)</button>
+        </div>
+        <div class="caption" style="margin-bottom:6px">
+          Rückrunde beginnt <b>nicht</b> mit den Spielern, die die Hinrunde beendet haben; Reihenfolge ist <b>neu</b> gemischt.
+        </div>
+        <h4 class="muted">Hinrunde</h4>
+        <div style="overflow:auto">
+          <table id="tblHin">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Spieler A</th>
+                <th>Spieler B</th>
+                <th>Sieger</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <h4 class="muted" style="margin-top:14px">Rückrunde</h4>
+        <div style="overflow:auto">
+          <table id="tblRueck">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Spieler A</th>
+                <th>Spieler B</th>
+                <th>Sieger</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <div class="grid grid-2" style="margin-top:16px">
+      <section class="card" aria-labelledby="h_wins">
+        <h5 id="h_wins">🏆 Turnier‑Gewinner‑Statistik</h5>
+        <div class="row">
+          <input type="date" id="winDate" />
+          <select id="winPlayer" aria-label="Gewinner wählen"></select>
+          <button class="btn" id="saveWin" type="button">💾 Speichern</button>
+          <button class="btn bad" id="clearWins" type="button">🗑️ Löschen</button>
+        </div>
+        <div style="overflow:auto;margin-top:8px">
+          <table id="winsTable">
+            <thead><tr><th>Datum</th><th>Gewinner</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="h_ht">
+        <h5 id="h_ht">📈 Tages‑Höchstwurf</h5>
+        <form id="htForm" class="row" action="#" autocomplete="off">
+          <input type="date" id="htDate" name="htDate" />
+          <select id="htPlayer" name="htPlayer" aria-label="Teilnehmer wählen"></select>
+          <input type="number" id="htScore" name="htScore" min="0" max="1000" placeholder="Wurf (0–1000)" />
+          <button class="btn" id="saveHT" type="submit">💾 Speichern</button>
+          <button class="btn bad" id="clearHT" type="button">🗑️ Löschen</button>
+        </form>
+        <div class="caption" style="margin:.35rem 0 0">Tipp: Im Punktefeld <b>Enter</b> → speichert direkt.</div>
+        <div style="overflow:auto;margin-top:8px">
+          <table id="htTable">
+            <thead><tr><th>Datum</th><th>Teilnehmer</th><th>Wurf</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <section class="card" style="margin-top:16px" aria-labelledby="h_sync">
+      <h5 id="h_sync">📦 Daten‑Sync (Permalink)</h5>
+      <div class="row">
+        <button class="btn" id="copyLink" type="button">🔗 Permalink kopieren</button>
+        <span class="caption">© DartVader – lokal gespeichert in deinem Browser.</span>
+      </div>
+    </section>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+  // --- Keys & State ---
+  const S_PLAYERS='dv_players_v2', S_RESULTS='dv_results_v2', S_WINS='dv_wins_v1', S_HT='dv_ht_v1';
+  let players=[], hin=[], rueck=[], results={};
+
+  const $=s=>document.querySelector(s); const $$=s=>Array.from(document.querySelectorAll(s));
+  const els={
+    playerForm:'#playerForm', playerName:'#playerName', addPlayer:'#addPlayer', clearPlayers:'#clearPlayers',
+    playersTable:'#playersTable tbody', resetResults:'#resetResults',
+    buildFair:'#buildFair', shuffleHin:'#shuffleHin',
+    tblHin:'#tblHin tbody', tblRueck:'#tblRueck tbody',
+    winDate:'#winDate', winPlayer:'#winPlayer', saveWin:'#saveWin', clearWins:'#clearWins', winsTable:'#winsTable tbody',
+    htForm:'#htForm', htDate:'#htDate', htPlayer:'#htPlayer', htScore:'#htScore', clearHT:'#clearHT', htTable:'#htTable tbody',
+    copyLink:'#copyLink', toast:'#toast'
+  };
+
+  // --- UX Helpers ---
+  function showToast(msg){ const t=$(els.toast); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1800); }
+  function today(){ return new Date().toISOString().slice(0,10); }
+  function escapeHtml(s){ return (''+s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
+  function shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; }
+
+  // --- Storage ---
+  const save=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+  const load=(k,def)=>{ try{ return JSON.parse(localStorage.getItem(k)||JSON.stringify(def)); }catch{return def;} };
+
+  // --- Round Robin ---
+  function roundRobin(list){
+    const names=list.slice(); if(names.length<2) return [];
+    let bye=null; if(names.length%2===1){ bye='FREILOS'; names.push(bye); }
+    const n=names.length, rounds=n-1, half=n/2; let arr=names.slice(); const out=[];
+    for(let r=0;r<rounds;r++){
+      for(let i=0;i<half;i++){ const a=arr[i], b=arr[n-1-i]; if(a!==bye && b!==bye) out.push({a,b}); }
+      arr=[arr[0], ...arr.slice(2), arr[1]]; // rotate keeping first fixed
+    }
+    return out;
+  }
+
+  // --- Rückrunde Constraints ---
+  const mirror = ms=> ms.map(m=>({a:m.b,b:m.a}));
+  const lastHin = ms=> !ms.length?null:{p1:ms[ms.length-1].a, p2:ms[ms.length-1].b};
+  function violatesStart(m,forb){ if(!forb) return false; return [forb.p1,forb.p2].includes(m.a) || [forb.p1,forb.p2].includes(m.b); }
+  function violatesBoundary(m,forb){ if(!forb) return false; return [forb.p1,forb.p2].includes(m.a) || [forb.p1,forb.p2].includes(m.b); }
+  function buildReturn(h){
+    const mirrored=mirror(h), forb=lastHin(h);
+    if(players.length<=2) return mirrored;
+    const MAX=300;
+    for(let t=0;t<MAX;t++){
+      const cand=shuffle(mirrored);
+      const same=cand.every((m,i)=> m.a===mirrored[i].a && m.b===mirrored[i].b); if(same) continue;
+      const first=cand[0]; if(violatesStart(first,forb)) continue; if(violatesBoundary(first,forb)) continue;
+      let clash=false; for(let i=0;i<cand.length;i++){ const c=cand[i], h=mirrored[i]; if(c.a===h.a && c.b===h.b){clash=true;break;} } if(clash) continue;
+      return cand;
+    }
+    for(let off=1; off<mirrored.length; off++){
+      const rot=mirrored.map((_,i)=>mirrored[(i+off)%mirrored.length]);
+      const first=rot[0]; if(violatesStart(first,forb)) continue; if(violatesBoundary(first,forb)) continue;
+      const same=rot.every((m,i)=> m.a===mirrored[i].a && m.b===mirrored[i].b); if(!same) return rot;
+    }
+    const safe=mirrored.slice(); if(safe.length>1 && violatesStart(safe[0],forb)){ [safe[0],safe[1]]=[safe[1],safe[0]]; }
+    return safe;
+  }
+
+  // --- Render ---
+  function key(leg,i){ return `${leg}-${i}`; }
+  function computeStats(){ const s={}; players.forEach(p=>s[p]={played:0,wins:0,losses:0});
+    function apply(ms,leg){ ms.forEach((m,i)=>{ const v=results[key(leg,i)]; if(!v) return; s[m.a].played++; s[m.b].played++; if(v==='A'){s[m.a].wins++; s[m.b].losses++;} else if(v==='B'){s[m.b].wins++; s[m.a].losses++;} }); }
+    apply(hin,'H'); apply(rueck,'R'); return s; }
+
+  function renderPlayers(){ const tbody=$(els.playersTable); tbody.innerHTML=''; const s=computeStats();
+    players.forEach((p,i)=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td>${escapeHtml(p)}</td><td>${s[p]?.played||0}</td><td>${s[p]?.wins||0}</td><td>${s[p]?.losses||0}</td><td><button class="btn bad" data-rm="${i}" type="button">Entfernen</button></td>`; tbody.appendChild(tr); });
+    $$('button[data-rm]').forEach(b=> b.addEventListener('click',()=>{ const i=+b.getAttribute('data-rm'); const name=players[i]; players.splice(i,1); save(S_PLAYERS,players); rebuild(true); showToast(`Spieler "${name}" entfernt`);}));
+    fillSelects(); }
+
+  function renderMatches(){ const H=$(els.tblHin), R=$(els.tblRueck); H.innerHTML=''; R.innerHTML='';
+    hin.forEach((m,i)=>{ const tr=document.createElement('tr'); const v=results[key('H',i)]||''; tr.innerHTML=`<td>${i+1}</td><td>${escapeHtml(m.a)}</td><td>${escapeHtml(m.b)}</td><td><select data-leg="H" data-i="${i}"><option value="">–</option><option value="A" ${v==='A'?'selected':''}>${escapeHtml(m.a)}</option><option value="B" ${v==='B'?'selected':''}>${escapeHtml(m.b)}</option></select></td>`; H.appendChild(tr); });
+    rueck.forEach((m,i)=>{ const tr=document.createElement('tr'); const v=results[key('R',i)]||''; tr.innerHTML=`<td>${i+1}</td><td>${escapeHtml(m.a)}</td><td>${escapeHtml(m.b)}</td><td><select data-leg="R" data-i="${i}"><option value="">–</option><option value="A" ${v==='A'?'selected':''}>${escapeHtml(m.a)}</option><option value="B" ${v==='B'?'selected':''}>${escapeHtml(m.b)}</option></select></td>`; R.appendChild(tr); });
+    $$('select[data-leg]').forEach(sel=> sel.addEventListener('change',()=>{ const leg=sel.getAttribute('data-leg'); const i=+sel.getAttribute('data-i'); results[key(leg,i)]=sel.value; save(S_RESULTS,results); renderPlayers(); })); }
+
+  // --- Selects for Wins/HT ---
+  function fillSelects(){ const opts=players.map(p=>`<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join('');
+    $(els.winPlayer).innerHTML=`<option value="">–</option>`+opts;
+    $(els.htPlayer).innerHTML=`<option value="">–</option>`+opts; }
+
+  // --- Build/Shuffle ---
+  function rebuild(clear=false){ if(players.length<2){ hin=[]; rueck=[]; renderMatches(); renderPlayers(); return; }
+    const base=shuffle(players); const rr=roundRobin(base); hin=rr; rueck=buildReturn(hin); if(clear){ results={}; save(S_RESULTS,results);} renderMatches(); renderPlayers(); }
+  function shuffleHin(){ if(hin.length<=1) return; hin=shuffle(hin); rueck=buildReturn(hin); results={}; save(S_RESULTS,results); renderMatches(); renderPlayers(); showToast('Hinrunde gemischt • Rückrunde neu aufgebaut'); }
+
+  // --- Wins & High Throw ---
+  function renderWins(){ const list=load(S_WINS,[]); const t=$(els.winsTable); t.innerHTML=''; list.forEach(r=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td>${r.date}</td><td>${escapeHtml(r.player)}</td>`; t.appendChild(tr); }); }
+  function renderHT(){ const list=load(S_HT,[]); const t=$(els.htTable); t.innerHTML=''; list.forEach(r=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td>${r.date}</td><td>${escapeHtml(r.player)}</td><td>${r.score}</td>`; t.appendChild(tr); }); }
+
+  // --- Events (Form-Submit für Enter) ---
+  function bindEvents(){
+    // Teilnehmer: Form-Submit → Enter oder Klick
+    $(els.playerForm).addEventListener('submit', (e)=>{ e.preventDefault(); const name=$(els.playerName).value.trim(); if(!name) return; if(players.includes(name)){ showToast('Spieler existiert bereits'); return; } players.push(name); save(S_PLAYERS,players); $(els.playerName).value=''; $(els.playerName).focus(); rebuild(true); showToast(`"${name}" hinzugefügt`); });
+
+    // Liste leeren
+    $(els.clearPlayers).addEventListener('click',()=>{ if(!confirm('Alle Spieler löschen?')) return; players=[]; save(S_PLAYERS,players); results={}; save(S_RESULTS,results); hin=[]; rueck=[]; renderMatches(); renderPlayers(); showToast('Teilnehmerliste geleert'); });
+
+    // Ergebnisse reset
+    $(els.resetResults).addEventListener('click',()=>{ results={}; save(S_RESULTS,results); renderPlayers(); $$('select[data-leg]').forEach(s=>s.value=''); showToast('Ergebnisse zurückgesetzt'); });
+
+    // Build / Shuffle
+    $(els.buildFair).addEventListener('click',()=>{ rebuild(true); showToast('Paarungen (FAIR) neu aufgebaut'); });
+    $(els.shuffleHin).addEventListener('click', shuffleHin);
+
+    // Wins
+    $(els.saveWin).addEventListener('click',()=>{ const date=$(els.winDate).value || today(); const pl=$(els.winPlayer).value; if(!pl){ showToast('Bitte Gewinner wählen'); return; } const list=load(S_WINS,[]); list.unshift({date,player:pl}); save(S_WINS,list); renderWins(); showToast('Gewinner gespeichert'); });
+    $(els.clearWins).addEventListener('click',()=>{ if(confirm('Alle Gewinner‑Einträge löschen?')){ save(S_WINS,[]); renderWins(); }});
+
+    // High Throw: Form-Submit → Enter oder Klick
+    $(els.htForm).addEventListener('submit', (e)=>{ e.preventDefault(); const date=$(els.htDate).value || today(); const pl=$(els.htPlayer).value; const sc=parseInt($(els.htScore).value,10); if(!pl){ showToast('Bitte Teilnehmer wählen'); return; } if(!(sc>=0 && sc<=1000)){ showToast('Wurf muss 0–1000 sein'); return; } const list=load(S_HT,[]); list.unshift({date,player:pl,score:sc}); save(S_HT,list); renderHT(); showToast('Tages‑Wurf gespeichert'); $(els.htScore).value=''; $(els.htScore).focus(); });
+
+    // Permalink
+    $(els.copyLink).addEventListener('click', async()=>{ const base=location.origin+location.pathname; const p=new URLSearchParams(); if(players.length) p.set('players',players.join(',')); const link=base+'?'+p.toString(); try{ await navigator.clipboard.writeText(link); showToast('Permalink kopiert'); }catch{ prompt('Permalink kopieren:', link); } });
+  }
+
+  // --- Boot ---
+  function loadFromQuery(){ const qs=new URLSearchParams(location.search); const p=qs.get('players'); if(p){ players=p.split(',').filter(Boolean); save(S_PLAYERS,players); }}
+  function boot(){ loadFromQuery(); players=load(S_PLAYERS,[]); results=load(S_RESULTS,{}); bindEvents(); $(els.winDate).value=today(); $(els.htDate).value=today(); renderPlayers(); if(players.length>=2){ rebuild(false); } renderWins(); renderHT(); $(els.playerName).focus(); }
+  document.addEventListener('DOMContentLoaded', boot);
+})();
+</script>
+</body>
+</html>
