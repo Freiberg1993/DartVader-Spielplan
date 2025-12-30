@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DartVader Turnierplan – Final Sync+</title>
+<style>
+  :root { --bg:#0e1116; --panel:#171b22; --accent:#6ee7ff; --accent2:#93ff6e; --text:#e6edf3; --muted:#94a3b8; }
+  html,body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,Arial}
+  .wrap{max-width:1100px;margin:0 auto;padding:1rem}
+  h1,h2,h3{margin:.6rem 0}.panel{background:var(--panel);border-radius:12px;padding:1rem;margin:.8rem 0;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+  .flex{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
+  .btn{display:inline-flex;align-items:center;gap:.4rem;background:#222a36;color:var(--text);border:1px solid #2b3240;padding:.48rem .72rem;border-radius:8px;cursor:pointer}
+  .btn:hover{border-color:var(--accent)}.btn.primary{background:var(--accent);color:#072a31;border-color:var(--accent);font-weight:600}
+  .btn.green{background:var(--accent2);color:#08290a;border-color:var(--accent2);font-weight:600}.btn.red{background:#3a1f23;color:#ffd5d5;border-color:#5c1a22}
+  input,select{background:#0f1319;color:var(--text);border:1px solid #2b3240;border-radius:6px;padding:.45rem .55rem}
+  table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid #2b3240;padding:.5rem;text-align:left}th{color:var(--muted);font-weight:600}
+  .small{color:var(--muted);font-size:.9rem}.tag{background:#263041;color:#cde4ff;padding:.15rem .4rem;border-radius:6px;font-size:.8rem}.footer{margin-top:1rem;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>DartVader Turnierplan</h1>
+  <div class="flex small"><span class="tag">⚡ Fairplay aktiv</span><span>Niemand spielt 2× in Folge, niemand wartet 3× in Folge. Rückrunde nicht identisch zur Hinrunde.</span></div>
+
+  <div class="panel">
+    <h2>Teilnehmer</h2>
+    <form id="addPlayerForm" class="flex" style="margin:.5rem 0;">
+      <input id="newPlayerName" type="text" placeholder="Neuen Spieler hinzufügen" />
+      <button id="addPlayerBtn" class="btn" type="submit">➕ Spieler hinzufügen</button>
+      <button id="resetResultsBtn" class="btn red" type="button">🧹 Ergebnisse zurücksetzen</button>
+    </form>
+    <p class="small">Tipp: Namen doppelklicken zum Bearbeiten.</p>
+    <table id="playersTable"><thead><tr><th>Name</th><th>Gespielt <span class="small">(tatsächlich)</span></th><th>Siege</th><th>Niederlagen</th><th>Aktion</th></tr></thead><tbody></tbody></table>
+  </div>
+
+  <div class="panel">
+    <h2>Spielplan</h2>
+    <div class="flex" style="margin:.5rem 0;"><button id="createPairsBtn" class="btn primary">🔁 Zufällige Paarungen (FAIR)</button><button id="mixOrderBtn" class="btn">🔀 Reihenfolge mischen (FAIR beibehalten)</button></div>
+    <p class="small">Beim Mischen werden die Fairplay‑Regeln strikt beachtet; Rückrunde startet nicht mit den Spielern, die die Hinrunde beenden.</p>
+    <h3>Hinrunde</h3>
+    <table id="round1Table"><thead><tr><th>#</th><th>Spieler A</th><th>Spieler B</th><th>Sieger</th></tr></thead><tbody></tbody></table>
+    <h3>Rückrunde</h3>
+    <table id="round2Table"><thead><tr><th>#</th><th>Spieler A</th><th>Spieler B</th><th>Sieger</th></tr></thead><tbody></tbody></table>
+  </div>
+
+  <div class="panel">
+    <h2>🏆 Tages‑Höchstwurf</h2>
+    <p class="small">Erfasse den höchsten Wurf des Tages (0–1000). Wird lokal gespeichert.</p>
+    <div class="flex"><input id="maxThrowDate" type="date" /><select id="maxThrowPlayer"></select><input id="maxThrowValue" type="number" min="0" max="1000" placeholder="0–1000" /><button id="saveMaxThrowBtn" class="btn green">💾 Speichern</button><button id="clearMaxThrowBtn" class="btn red">🗑️ Alle löschen</button></div>
+    <div class="flex" style="margin-top:.5rem;"><label class="small" for="deletePlayerSelect">Einträge eines Teilnehmers löschen</label><select id="deletePlayerSelect"></select><button id="deleteByPlayerBtn" class="btn red">🗑️ Einträge löschen</button></div>
+    <h3 style="margin-top:1rem;">Letzte Einträge</h3>
+    <table id="maxThrowTable"><thead><tr><th>Datum</th><th>Teilnehmer</th><th>Wurf</th><th>Aktion</th></tr></thead><tbody></tbody></table>
+  </div>
+
+  <div class="panel">
+    <h2>📈 Turnier‑Gewinner‑Historie</h2>
+    <div class="flex"><input id="winnerDate" type="date" /><select id="winnerPlayer"></select><button id="saveWinnerBtn" class="btn green">💾 Speichern</button><button id="clearWinnerBtn" class="btn red">🗑️ Alle löschen</button></div>
+    <table id="winnersTable" style="margin-top:.5rem;"><thead><tr><th>Datum</th><th>Gewinner</th></tr></thead><tbody></tbody></table>
+  </div>
+
+  <div class="panel">
+    <h2>🔗 Zustand speichern & teilen</h2>
+    <p class="small">Sichere den kompletten Zustand (Spieler, Spielplan, Höchstwurf, Gewinner), um ihn später oder auf einem anderen Rechner wieder zu öffnen.</p>
+    <div class="flex">
+      <button id="copyPermalinkBtn" class="btn">🔗 Permalink kopieren</button>
+      <button id="downloadJsonBtn" class="btn">💾 Als Datei speichern (.json)</button>
+      <label class="btn" for="uploadJsonInput">📎 Datei laden</label>
+      <input id="uploadJsonInput" type="file" accept="application/json" style="display:none;" />
+      <span id="permaStatus" class="small"></span>
+    </div>
+    <p class="small">Tipp: „Permalink kopieren“ ist ideal für Messenger/Notiz‑Apps. Die JSON‑Datei ist praktisch für Backups.</p>
+  </div>
+
+  <p class="footer">© DartVader – lokal gespeichert in deinem Browser.</p>
+</div>
+<script>
+const LS_KEY='dartvader_syncplus_v1';
+const store={players:[],matches:{round1:[],round2:[]},maxThrows:[],winners:[]};
+function uid(){return Math.random().toString(36).slice(2,10);} function saveAll(){localStorage.setItem(LS_KEY,JSON.stringify(store));}
+function loadAll(){const qs=new URLSearchParams(location.search); if(qs.has('data')){try{Object.assign(store,JSON.parse(decodeURIComponent(qs.get('data')))); saveAll();}catch(e){console.warn('Permalink laden fehlgeschlagen',e)}} const raw=localStorage.getItem(LS_KEY); if(raw){try{Object.assign(store,JSON.parse(raw))}catch(e){}} store.players||=[]; store.matches||={round1:[],round2:[]}; store.maxThrows||=[]; store.winners||=[];}
+function getPlayer(id){return store.players.find(p=>p.id===id)} function playerName(id){const p=getPlayer(id); return p? p.name:'—'}
+const playersTBody=document.querySelector('#playersTable tbody'); const r1Body=document.querySelector('#round1Table tbody'); const r2Body=document.querySelector('#round2Table tbody'); const maxThrowPlayerSel=document.getElementById('maxThrowPlayer'); const winnerPlayerSel=document.getElementById('winnerPlayer'); const deletePlayerSel=document.getElementById('deletePlayerSelect');
+function cell(t){const td=document.createElement('td'); td.textContent=t; return td}
+function escapeHtml(s){return s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}
+function renderPlayers(){const stats=new Map(); for(const p of store.players)stats.set(p.id,{played:0,wins:0,losses:0}); for(const m of [...store.matches.round1,...store.matches.round2]){if(m.winnerId){stats.get(m.aId).played++; stats.get(m.bId).played++; if(m.winnerId===m.aId){stats.get(m.aId).wins++; stats.get(m.bId).losses++;} else if(m.winnerId===m.bId){stats.get(m.bId).wins++; stats.get(m.aId).losses++;}}} playersTBody.innerHTML=''; for(const p of store.players){const tr=document.createElement('tr'); const tdName=document.createElement('td'); tdName.textContent=p.name; tdName.title='Doppelklick zum Bearbeiten'; tdName.ondblclick=()=>{const v=prompt('Neuen Namen eingeben:',p.name); if(v&&v.trim()){p.name=v.trim(); renderAll(); saveAll();}}; tr.appendChild(tdName); const s=stats.get(p.id); tr.appendChild(cell(s.played)); tr.appendChild(cell(s.wins)); tr.appendChild(cell(s.losses)); const tdAct=document.createElement('td'); const del=document.createElement('button'); del.className='btn red'; del.textContent='✖ Entfernen'; del.onclick=()=>{if(!confirm('Spieler wirklich entfernen?'))return; store.players=store.players.filter(x=>x.id!==p.id); for(const k of ['round1','round2']) store.matches[k]=store.matches[k].filter(m=>m.aId!==p.id&&m.bId!==p.id); store.maxThrows=store.maxThrows.filter(x=>x.playerId!==p.id); store.winners=store.winners.filter(x=>x.playerId!==p.id); renderAll(); saveAll();}; tdAct.appendChild(del); tr.appendChild(tdAct); playersTBody.appendChild(tr);} const opts=store.players.map(p=>`<option value="${p.id}">${escapeHtml(p.name)}</option>`).join(''); maxThrowPlayerSel.innerHTML='<option value="">—</option>'+opts; winnerPlayerSel.innerHTML='<option value="">—</option>'+opts; deletePlayerSel.innerHTML='<option value="">—</option>'+opts;}
+function renderMatches(){function round(tbody,list){tbody.innerHTML=''; list.forEach((m,i)=>{const tr=document.createElement('tr'); tr.appendChild(cell(i+1)); tr.appendChild(cell(playerName(m.aId))); tr.appendChild(cell(playerName(m.bId))); const td=document.createElement('td'); const sel=document.createElement('select'); sel.innerHTML='<option value="">—</option>'+`<option value="${m.aId}">${escapeHtml(playerName(m.aId))}</option>`+`<option value="${m.bId}">${escapeHtml(playerName(m.bId))}</option>`; sel.value=m.winnerId||''; sel.onchange=()=>{m.winnerId=sel.value||null; renderPlayers(); saveAll();}; td.appendChild(sel); tr.appendChild(td); tbody.appendChild(tr);});} round(r1Body,store.matches.round1); round(r2Body,store.matches.round2);}
+function renderMaxThrows(){const body=document.querySelector('#maxThrowTable tbody'); body.innerHTML=''; for(const e of store.maxThrows.slice().reverse()){const tr=document.createElement('tr'); tr.appendChild(cell(e.date||'')); tr.appendChild(cell(playerName(e.playerId))); tr.appendChild(cell(e.value??'')); const tdDel=document.createElement('td'); const b=document.createElement('button'); b.className='btn red'; b.textContent='Löschen'; b.onclick=()=>{const idx=store.maxThrows.findIndex(x=>x.date===e.date&&x.playerId===e.playerId&&x.value===e.value); if(idx>=0){store.maxThrows.splice(idx,1); renderMaxThrows(); saveAll();}}; tdDel.appendChild(b); tr.appendChild(tdDel); body.appendChild(tr);} }
+function renderWinners(){const body=document.querySelector('#winnersTable tbody'); body.innerHTML=''; for(const e of store.winners.slice().reverse()){const tr=document.createElement('tr'); tr.appendChild(cell(e.date||'')); tr.appendChild(cell(playerName(e.playerId))); body.appendChild(tr);} }
+function renderAll(){renderPlayers(); renderMatches(); renderMaxThrows(); renderWinners();}
+function generateRoundRobinPairs(ids){const a=ids.slice(); if(a.length<2)return[]; const hasBye=a.length%2===1; if(hasBye)a.push('__BYE__'); const n=a.length; const rounds=n-1; const pairs=[]; let arr=a.slice(); for(let r=0;r<rounds;r++){for(let i=0;i<n/2;i++){const x=arr[i],y=arr[n-1-i]; if(x!=='__BYE__'&&y!=='__BYE__') pairs.push({id:uid(),aId:x,bId:y,winnerId:null});} const fixed=arr[0]; const rest=arr.slice(1); rest.unshift(rest.pop()); arr=[fixed,...rest];} return pairs;}
+function shuffle(arr){const a=arr.slice(); for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a;}
+function mixOrderFair(pairs,ids,avoidFirst=[]){const rem=pairs.slice(); const seq=[]; const lastIdx=new Map(ids.map(id=>[id,-Infinity])); function violates(m){const last=seq[seq.length-1]; if(last&&(m.aId===last.aId||m.aId===last.bId||m.bId===last.aId||m.bId===last.bId)) return true; const round=seq.length; for(const id of ids){const streak=round-lastIdx.get(id)-1; if(streak>=3) return true;} if(seq.length===0&&(avoidFirst.includes(m.aId)||avoidFirst.includes(m.bId))) return true; return false;} while(rem.length){const round=seq.length; const cand=rem.map(m=>({m,score:Math.max(round-lastIdx.get(m.aId)-1,round-lastIdx.get(m.bId)-1)})).sort((x,y)=>y.score-x.score).map(x=>x.m); let pick=null; for(const m of cand){if(!violates(m)){pick=m; break;}} if(!pick){for(const m of cand){const last=seq[seq.length-1]; const consecutive= last&&(m.aId===last.aId||m.aId===last.bId||m.bId===last.aId||m.bId===last.bId); if(!consecutive){pick=m; break;}}} if(!pick) pick=rem[0]; seq.push(pick); lastIdx.set(pick.aId,round); lastIdx.set(pick.bId,round); rem.splice(rem.indexOf(pick),1);} return seq;}
+function buildSchedule(){const ids=store.players.map(p=>p.id); if(ids.length<2){alert('Mindestens 2 Spieler erforderlich.'); return;} const base=generateRoundRobinPairs(ids); const r1=mixOrderFair(shuffle(base),ids); store.matches.round1=r1.map(m=>({...m,winnerId:findPrevWinner('round1',m)})); const swapped=base.map(m=>({id:uid(),aId:m.bId,bId:m.aId,winnerId:null})); const avoid=[r1[r1.length-1].aId,r1[r1.length-1].bId]; const r2=mixOrderFair(shuffle(swapped),ids,avoid); store.matches.round2=r2.map(m=>({...m,winnerId:findPrevWinner('round2',m)}));}
+function findPrevWinner(k,m){const old=store.matches[k]||[]; const same=old.find(x=>(x.aId===m.aId&&x.bId===m.bId)||(x.aId===m.bId&&x.bId===m.aId)); return same? same.winnerId||null:null}
+function mixExistingOrder(){const ids=store.players.map(p=>p.id); if(!store.matches.round1.length){alert('Bitte zuerst Paarungen erstellen.'); return;} store.matches.round1=mixOrderFair(shuffle(store.matches.round1),ids); const avoid=[store.matches.round1[store.matches.round1.length-1].aId,store.matches.round1[store.matches.round1.length-1].bId]; store.matches.round2=mixOrderFair(shuffle(store.matches.round2),ids,avoid);}
+
+document.getElementById('resetResultsBtn').onclick=()=>{if(!confirm('Alle Ergebnisse (Sieger) wirklich zurücksetzen?'))return; for(const m of [...store.matches.round1,...store.matches.round2]) m.winnerId=null; renderAll(); saveAll();};
+document.getElementById('createPairsBtn').onclick=()=>{buildSchedule(); renderMatches(); renderPlayers(); saveAll();};
+document.getElementById('mixOrderBtn').onclick=()=>{mixExistingOrder(); renderMatches(); renderPlayers(); saveAll();};
+function addPlayer(){const nameEl=document.getElementById('newPlayerName'); const name=(nameEl.value||'').trim(); if(!name)return false; const exists=store.players.some(p=>p.name.toLowerCase()===name.toLowerCase()); if(exists){alert('Name existiert bereits.'); return false;} store.players.push({id:uid(),name}); nameEl.value=''; renderAll(); saveAll(); setTimeout(()=>nameEl.focus(),0); return true;}
+document.getElementById('addPlayerForm').addEventListener('submit',e=>{e.preventDefault(); addPlayer();});
+document.getElementById('addPlayerBtn').onclick=e=>{e.preventDefault(); addPlayer();};
+document.getElementById('saveMaxThrowBtn').onclick=()=>{const date=document.getElementById('maxThrowDate').value; const pid=document.getElementById('maxThrowPlayer').value; const vRaw=document.getElementById('maxThrowValue').value; const v=vRaw?Number(vRaw):null; if(!date||!pid||v===null||isNaN(v)){alert('Bitte Datum, Teilnehmer und Wurf eintragen.'); return;} if(v<0||v>1000){alert('Wurf muss zwischen 0 und 1000 liegen.'); return;} store.maxThrows.push({date,playerId:pid,value:v}); renderMaxThrows(); saveAll();};
+document.getElementById('clearMaxThrowBtn').onclick=()=>{if(!confirm('Alle Höchstwurf-Einträge löschen?'))return; store.maxThrows=[]; renderMaxThrows(); saveAll();};
+document.getElementById('deleteByPlayerBtn').onclick=()=>{const pid=deletePlayerSel.value; if(!pid){alert('Bitte Teilnehmer wählen.'); return;} const count=store.maxThrows.filter(x=>x.playerId===pid).length; if(!count){alert('Keine Einträge für diesen Teilnehmer.'); return;} if(!confirm(`Alle ${count} Einträge dieses Teilnehmers löschen?`)) return; store.maxThrows=store.maxThrows.filter(x=>x.playerId!==pid); renderMaxThrows(); saveAll();};
+document.getElementById('saveWinnerBtn').onclick=()=>{const date=document.getElementById('winnerDate').value; const pid=document.getElementById('winnerPlayer').value; if(!date||!pid){alert('Bitte Datum und Gewinner wählen.'); return;} store.winners.push({date,playerId:pid}); renderWinners(); saveAll();};
+document.getElementById('clearWinnerBtn').onclick=()=>{if(!confirm('Alle Gewinner-Einträge löschen?'))return; store.winners=[]; renderWinners(); saveAll();};
+
+// Export JSON
+ document.getElementById('downloadJsonBtn').onclick=()=>{const blob=new Blob([JSON.stringify(store,null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='dartvader_zustand.json'; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(a.href);};
+// Import JSON
+ const uploadInput=document.getElementById('uploadJsonInput'); uploadInput.addEventListener('change', async()=>{const file=uploadInput.files&&uploadInput.files[0]; if(!file)return; try{const text=await file.text(); const obj=JSON.parse(text); if(!obj||!obj.players||!obj.matches) throw new Error('Ungültiges Format'); store.players=Array.isArray(obj.players)?obj.players:[]; store.matches=obj.matches&&typeof obj.matches==='object'?obj.matches:{round1:[],round2:[]}; store.maxThrows=Array.isArray(obj.maxThrows)?obj.maxThrows:[]; store.winners=Array.isArray(obj.winners)?obj.winners:[]; saveAll(); renderAll(); document.getElementById('permaStatus').textContent='Datei geladen!'; setTimeout(()=>document.getElementById('permaStatus').textContent='',2000);}catch(e){alert('Konnte Datei nicht laden: '+(e&&e.message?e.message:e));} finally{uploadInput.value='';}});
+// Permalink
+ document.getElementById('copyPermalinkBtn').onclick=async()=>{const json=JSON.stringify(store); const url=location.origin+location.pathname+'?data='+encodeURIComponent(json); try{await navigator.clipboard.writeText(url); document.getElementById('permaStatus').textContent='Link kopiert!'; setTimeout(()=>document.getElementById('permaStatus').textContent='',2000);}catch(e){alert('Konnte nicht kopieren: '+url);}};
+
+loadAll(); renderAll();
+</script>
+</body>
+</html>
